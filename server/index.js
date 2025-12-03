@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { Queue, Job } = require('bullmq');
 const IORedis = require('ioredis');
+const { Storage } = require('@google-cloud/storage');
 
 const app = express();
 const port = 3000;
@@ -18,8 +19,38 @@ const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379'
 // Setup Queue
 const renderQueue = new Queue('render-queue', { connection });
 
+// Setup Google Cloud Storage
+const storage = new Storage();
+const bucketName = process.env.GCP_BUCKET_NAME || 'onera-assets'; // Default fallback or error
+
 app.get('/', (req, res) => {
   res.send('Onera API is running');
+});
+
+app.POST('/api/assets/sign', async (req, res) => {
+    try {
+        const { filename, contentType } = req.body;
+
+        if (!filename || !contentType) {
+            return res.status(400).json({ error: 'Missing filename or contentType' });
+        }
+
+        const file = storage.bucket(bucketName).file(filename);
+
+        const [uploadUrl] = await file.getSignedUrl({
+            version: 'v4',
+            action: 'write',
+            expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+            contentType,
+        });
+
+        const publicUrl = `https://storage.googleapis.com/${bucketName}/${filename}`;
+
+        res.json({ uploadUrl, publicUrl });
+    } catch (error) {
+        console.error('Error signing URL:', error);
+        res.status(500).json({ error: 'Failed to sign URL' });
+    }
 });
 
 app.POST('/api/render', async (req, res) => {

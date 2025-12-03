@@ -191,13 +191,35 @@ const EditorProvider = ({ children }) => {
   }, [isPlaying, duration]);
 
   const handleUpload = async (file, typeOverride = null) => {
-    const url = URL.createObjectURL(file);
-    const type = typeOverride || (file.type.startsWith('image/') ? 'image' : 'video');
-    const newAsset = { id: generateId(), src: url, type, name: file.name };
-    setMediaAssets(prev => [newAsset, ...prev]);
-    if (typeOverride === 'element-image') {
-        addLayer('element', 'Image', { subtype: 'image', src: url, style: { width: '200px', height: '200px', left: '50%', top: '50%' } });
-    } else { setVideoUrl(url); addToTimeline(newAsset); }
+    try {
+      // 1. Get Signed URL
+      const signRes = await fetch('http://localhost:3000/api/assets/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, contentType: file.type }),
+      });
+      const { uploadUrl, publicUrl } = await signRes.json();
+
+      // 2. Upload File
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type }
+      });
+
+      // 3. Use Public URL
+      const url = publicUrl;
+      const type = typeOverride || (file.type.startsWith('image/') ? 'image' : 'video');
+      const newAsset = { id: generateId(), src: url, type, name: file.name };
+      setMediaAssets(prev => [newAsset, ...prev]);
+      if (typeOverride === 'element-image') {
+          addLayer('element', 'Image', { subtype: 'image', src: url, style: { width: '200px', height: '200px', left: '50%', top: '50%' } });
+      } else { setVideoUrl(url); addToTimeline(newAsset); }
+
+    } catch (err) {
+      console.error('Upload failed:', err);
+      alert('Upload failed. See console.');
+    }
   };
 
   const addToTimeline = (asset) => {

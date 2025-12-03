@@ -25,6 +25,9 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@postgres:5432/onera
       - REDIS_URL=redis://redis:6379
+      - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
     ports:
       - "3000:3000"
     depends_on:
@@ -38,6 +41,9 @@ services:
     container_name: onera_worker
     environment:
       - REDIS_URL=redis://redis:6379
+      - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
     depends_on:
       - redis
 
