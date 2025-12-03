@@ -1,0 +1,19 @@
+{
+  "name": "video-editor-worker",
+  "version": "1.0.0",
+  "description": "Worker node for video rendering",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node manual-test.js"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.14.0",
+    "@remotion/bundler": "^4.0.233",
+    "@remotion/renderer": "^4.0.233",
+    "bullmq": "^5.34.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.233"
+  }
+}
