@@ -1,0 +1,18 @@
+{
+  "name": "onera-worker",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.380",
+    "@remotion/renderer": "^4.0.380",
+    "dotenv": "^16.3.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "redis": "^4.6.10",
+    "remotion": "^4.0.380"
+  }
+}
