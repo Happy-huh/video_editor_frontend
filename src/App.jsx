@@ -4,8 +4,10 @@ import { EditorCanvas } from './components/canvas/EditorCanvas';
 import { Timeline } from './components/timeline/Timeline';
 import { Sidebar } from './components/panels/Sidebar';
 import { ExportModal } from './components/export/ExportModal';
+import { AudioController } from './components/audio/AudioController';
 import { Download } from 'lucide-react';
 import './index.css';
+import './App.css';
 
 function AppContent() {
   const [timelineHeight, setTimelineHeight] = useState(300);
@@ -37,6 +39,7 @@ function AppContent() {
 
         <div style={{flex:1, overflow:'hidden', position:'relative'}}>
              <EditorCanvas />
+             <AudioController />
         </div>
         
         <div className="resizer-y"

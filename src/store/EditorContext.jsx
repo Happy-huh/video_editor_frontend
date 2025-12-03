@@ -33,7 +33,7 @@ export const EditorProvider = ({ children }) => {
   const stageRef = useRef(null);
 
   const animationRef = useRef(null);
-  const lastTimeRef = useRef(Date.now());
+  const lastTimeRef = useRef(0);
 
   // Main Loop
   useEffect(() => {
@@ -60,17 +60,40 @@ export const EditorProvider = ({ children }) => {
 
   const handleUpload = async (file, typeOverride = null) => {
     const url = URL.createObjectURL(file);
-    const type = typeOverride || (file.type.startsWith('image/') ? 'image' : 'video');
+    const type = typeOverride || (file.type.startsWith('image/') ? 'image' : (file.type.startsWith('video/') ? 'video' : 'audio'));
     const newAsset = { id: generateId(), src: url, type, name: file.name };
     setMediaAssets(prev => [newAsset, ...prev]);
 
-    // Add to timeline automatically if it's a main media
-    if (!typeOverride) {
+    // Add to timeline automatically if it's a main media or audio
+    if (!typeOverride && type !== 'audio') {
        addToTimeline(newAsset);
+    }
+    if (type === 'audio') {
+       // Add audio to audio track automatically
+       const newLayer = {
+          id: generateId(), type: 'audio', subtype: 'audio', src: newAsset.src,
+          content: newAsset.name, start: currentTime, end: currentTime + 10, // Default 10s
+          trimStart: 0,
+          opacity: 1
+       };
+       setLayers(prev => [...prev, newLayer]);
     }
   };
 
   const addToTimeline = (asset) => {
+    if (asset.type === 'audio') {
+        const audioLayers = layers.filter(l => l.type === 'audio');
+        const startTime = magnetic ? (audioLayers.length > 0 ? Math.max(...audioLayers.map(l => l.end)) : 0) : currentTime;
+        const newLayer = {
+            id: generateId(), type: 'audio', subtype: 'audio', src: asset.src,
+            content: asset.name, start: startTime, end: startTime + 10,
+            trimStart: 0
+        };
+        setLayers(prev => [...prev, newLayer]);
+        if (newLayer.end > duration) setDuration(newLayer.end);
+        return;
+    }
+
     const mediaLayers = layers.filter(l => l.type === 'media');
     const startTime = magnetic ? (mediaLayers.length > 0 ? Math.max(...mediaLayers.map(l => l.end)) : 0) : currentTime;
 
@@ -143,7 +166,7 @@ export const EditorProvider = ({ children }) => {
     setLayers(prev => {
       const layer = prev.find(l => l.id === id);
       // Only update if it hasn't been manually trimmed yet (heuristic)
-      if (layer && layer.subtype === 'video' && (layer.end - layer.start === 5)) {
+      if (layer && (layer.subtype === 'video' || layer.type === 'audio') && (layer.end - layer.start === 5 || layer.end - layer.start === 10)) {
              const newEnd = layer.start + actualDuration;
              setDuration(d => Math.max(d, newEnd));
              return prev.map(l => l.id === id ? { ...l, end: newEnd } : l);
@@ -152,12 +175,35 @@ export const EditorProvider = ({ children }) => {
     });
   };
 
+  // Track Controls
+  const toggleTrackLock = (track) => {
+    setTrackSettings(prev => ({
+        ...prev,
+        [track]: { ...prev[track], locked: !prev[track].locked }
+    }));
+  };
+
+  const toggleTrackMute = (track) => {
+    setTrackSettings(prev => ({
+        ...prev,
+        [track]: { ...prev[track], muted: !prev[track].muted }
+    }));
+  };
+
+  const toggleTrackSolo = (track) => {
+      // Toggle logic usually involves muting all others, but for MVP just toggling state
+      setTrackSettings(prev => ({
+          ...prev,
+          [track]: { ...prev[track], solo: !prev[track].solo }
+      }));
+  };
+
   return (
     <EditorContext.Provider value={{
-      projectStatus, layers, setLayers,
+      projectStatus, setProjectStatus, layers, setLayers,
       selectedLayerId, setSelectedLayerId, mediaAssets,
       addLayer, updateLayer, deleteLayer, addToTimeline,
-      trackSettings, toggleTrackLock, setTrackSettings,
+      trackSettings, setTrackSettings, toggleTrackLock, toggleTrackMute, toggleTrackSolo,
       magnetic, setMagnetic, ripple, setRipple,
       currentTime, setCurrentTime, isPlaying, setIsPlaying,
       duration, setDuration, handleUpload, updateClipDuration,

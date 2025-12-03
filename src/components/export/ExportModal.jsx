@@ -55,10 +55,8 @@ export const ExportModal = ({ isOpen, onClose }) => {
 
       if (!stage) throw new Error("Stage not initialized");
 
-      // Find all Konva nodes that are wrapping videos
-      // We look for nodes with name 'video-layer' which we added in EditorCanvas
+      // --- PHASE 1: VIDEO RENDERING ---
       const videoNodes = stage.find('.video-layer');
-
       console.log(`Found ${videoNodes.length} video layers to sync.`);
 
       for (let i = 0; i < totalFrames; i++) {
@@ -68,7 +66,6 @@ export const ExportModal = ({ isOpen, onClose }) => {
          setCurrentTime(time);
 
          // 2. Manually sync video elements
-         // We must wait for them to seek to the exact frame time
          const seekPromises = videoNodes.map(node => {
              const layerId = node.id();
              const layer = layers.find(l => l.id === layerId);
@@ -87,35 +84,85 @@ export const ExportModal = ({ isOpen, onClose }) => {
          await Promise.all(seekPromises);
 
          // 3. Render Stage
-         // Force a redraw of the Konva layer to ensure the video texture is updated
          stage.getLayers().forEach(l => l.draw());
 
          // 4. Capture Frame
-         const dataURL = stage.toDataURL({ pixelRatio: 2 }); // 2x for better quality
+         const dataURL = stage.toDataURL({ pixelRatio: 2 });
          const data = await fetchFile(dataURL);
          const frameName = `frame-${String(i).padStart(4, '0')}.png`;
          await ffmpeg.writeFile(frameName, data);
 
-         const pct = Math.round((i / totalFrames) * 100);
+         const pct = Math.round((i / totalFrames) * 80); // Video is 80% of work
          setProgress(pct);
-         setStatus(`Rendering frame ${i}/${totalFrames}`);
+         setStatus(`Rendering visual frame ${i}/${totalFrames}`);
 
-         // Small delay to allow UI to update
          await new Promise(r => setTimeout(r, 0));
       }
 
-      setStatus('Encoding MP4...');
+      // --- PHASE 2: AUDIO PROCESSING ---
+      setStatus('Processing Audio...');
+      const audioLayers = layers.filter(l => (l.type === 'audio' || l.type === 'media') && !l.muted);
+      let audioInputs = [];
+      let filterComplex = '';
 
-      // -r 30: Output framerate
-      // -pix_fmt yuv420p: Ensure compatibility with all players
-      await ffmpeg.exec([
+      if (audioLayers.length > 0) {
+          // Write all audio source files to ffmpeg virtual fs
+          for (let i = 0; i < audioLayers.length; i++) {
+              const layer = audioLayers[i];
+              const fileName = `audio_${i}.${layer.type === 'video' || layer.subtype === 'video' ? 'mp4' : 'mp3'}`;
+              await ffmpeg.writeFile(fileName, await fetchFile(layer.src));
+              audioInputs.push(`-i ${fileName}`);
+
+              // Calculate delays and trims
+              // [0:a]atrim=start=0:end=5,adelay=1000|1000[a0];
+              // Note: adelay is in milliseconds
+              const startDelay = Math.round(layer.start * 1000);
+              const trimStart = layer.trimStart;
+              const duration = layer.end - layer.start;
+              const trimEnd = trimStart + duration;
+
+              filterComplex += `[${i}:a]atrim=start=${trimStart}:end=${trimEnd},asetpts=PTS-STARTPTS,adelay=${startDelay}|${startDelay}[a${i}];`;
+          }
+
+          // Mix all streams
+          // [a0][a1]amix=inputs=2[outa]
+          const mixInputs = audioLayers.map((_, i) => `[a${i}]`).join('');
+          filterComplex += `${mixInputs}amix=inputs=${audioLayers.length}:duration=first:dropout_transition=0[outa]`;
+      }
+
+      // --- PHASE 3: ENCODING ---
+      setStatus('Encoding Final Output...');
+
+      const ffmpegArgs = [
           '-framerate', String(fps),
           '-pattern_type', 'glob',
-          '-i', 'frame-*.png',
+          '-i', 'frame-*.png'
+      ];
+
+      // Add audio inputs if any
+      if (audioLayers.length > 0) {
+          // Parse manual inputs string
+          const inputArgs = audioInputs.map(i => i.split(' ')).flat();
+          ffmpegArgs.push(...inputArgs);
+
+          ffmpegArgs.push('-filter_complex', filterComplex, '-map', '0:v', '-map', '[outa]');
+      } else {
+          // No audio
+          ffmpegArgs.push('-map', '0:v');
+      }
+
+      ffmpegArgs.push(
           '-c:v', 'libx264',
           '-pix_fmt', 'yuv420p',
+          '-shortest', // Stop when shortest stream ends (video usually)
           'output.mp4'
-      ]);
+      );
+
+      // Clean up inputs string for exec
+      const finalArgs = ffmpegArgs.flat().filter(arg => arg && arg.trim() !== '');
+      console.log('FFmpeg Args:', finalArgs);
+
+      await ffmpeg.exec(finalArgs);
 
       setStatus('Finalizing...');
       const data = await ffmpeg.readFile('output.mp4');
@@ -135,9 +182,6 @@ export const ExportModal = ({ isOpen, onClose }) => {
       setTimeout(() => {
           setIsProcessing(false);
           onClose();
-          // Cleanup files to free memory
-          // ffmpeg.deleteFile('output.mp4');
-          // ffmpeg.deleteFile('frame-*.png');
       }, 2000);
 
     } catch (e) {
@@ -170,7 +214,7 @@ export const ExportModal = ({ isOpen, onClose }) => {
              <div>
                  <div style={{background:'#111', padding:16, borderRadius:8, marginBottom:20, fontSize:13, color:'#aaa', border:'1px solid #333'}}>
                     <p style={{margin:0, marginBottom:8}}><strong>Settings:</strong> MP4 • 30 FPS • H.264</p>
-                    <p style={{margin:0}}>This process runs entirely in your browser. It may take a minute for longer videos.</p>
+                    <p style={{margin:0}}>Includes all audio tracks and visual effects. Processing is done locally.</p>
                  </div>
                  <button className="btn-primary" onClick={handleExport} style={{width:'100%', background:'#7d55ff', color:'white', padding:'12px', border:'none', borderRadius:6, cursor:'pointer', fontWeight:'bold', fontSize:14}}>
                     Start Render

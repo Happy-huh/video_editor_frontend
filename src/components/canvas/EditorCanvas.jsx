@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Stage, Layer, Image, Text, Rect, Transformer, Circle } from 'react-konva';
 import { useEditor } from '../../store/EditorContext';
 import Konva from 'konva';
@@ -6,34 +6,50 @@ import Konva from 'konva';
 // --- VIDEO ELEMENT WRAPPER FOR KONVA ---
 const VideoObj = ({ layer, isPlaying, currentTime, isSelected, onSelect, onChange }) => {
   const imageRef = useRef(null);
-  const videoElement = useMemo(() => {
+
+  const [videoElement, setVideoElement] = useState(null);
+
+  useEffect(() => {
     const el = document.createElement('video');
     el.src = layer.src;
     el.crossOrigin = 'anonymous';
-    // important for seeking performance
     el.preload = 'auto';
-    return el;
+    setVideoElement(el);
   }, [layer.src]);
 
   // Expose video element on the Konva Node for the Exporter to find
   useEffect(() => {
-    if (imageRef.current) {
+    if (imageRef.current && videoElement) {
         imageRef.current.setAttr('videoElement', videoElement);
         imageRef.current.setAttr('sourceLayerId', layer.id);
+
+        // Apply filters if present
+        if (layer.filters && layer.filters.includes('vhs')) {
+            imageRef.current.cache();
+            imageRef.current.filters([Konva.Filters.Noise, Konva.Filters.RGB]);
+            imageRef.current.noise(0.2);
+            imageRef.current.red({x: 5, y: 0});
+            imageRef.current.green({x: -5, y: 0});
+            imageRef.current.blue({x: 0, y: 0});
+        } else {
+            imageRef.current.clearCache();
+            imageRef.current.filters([]);
+        }
     }
-  }, [videoElement, layer.id]);
+  }, [videoElement, layer.id, layer.filters]);
 
   useEffect(() => {
+    if (!videoElement) return;
+
     // Sync video time
-    // Logic: calculate local time relative to layer start
     const relativeTime = (currentTime - layer.start) + layer.trimStart;
 
-    // We only control playback here if NOT exporting.
-    // During export, the Exporter manually seeks.
+    // During playback/preview
     if (currentTime >= layer.start && currentTime < layer.end) {
-        // Only sync if significant drift or seek happened
         if (Math.abs(videoElement.currentTime - relativeTime) > 0.2) {
-            videoElement.currentTime = relativeTime;
+             // Safe mutation of DOM element property
+             const el = videoElement;
+             el.currentTime = relativeTime;
         }
 
         if (isPlaying && videoElement.paused) {
@@ -59,15 +75,16 @@ const VideoObj = ({ layer, isPlaying, currentTime, isSelected, onSelect, onChang
         anim = new Konva.Animation(update, [imageRef.current.getLayer()]);
         anim.start();
     } else {
-        // One manual update when paused (seeking)
         update();
     }
     return () => { if(anim) anim.stop(); };
-  }, [isPlaying, videoElement]);
+  }, [isPlaying]);
 
   // Update duration in store once metadata loads
   const { updateClipDuration } = useEditor();
   useEffect(() => {
+      if (!videoElement) return;
+
       const handleMeta = () => updateClipDuration(layer.id, videoElement.duration);
       videoElement.addEventListener('loadedmetadata', handleMeta);
       return () => videoElement.removeEventListener('loadedmetadata', handleMeta);
@@ -110,7 +127,7 @@ const VideoObj = ({ layer, isPlaying, currentTime, isSelected, onSelect, onChang
             y: e.target.y(),
           });
         }}
-        onTransformEnd={(e) => {
+        onTransformEnd={() => {
           const node = imageRef.current;
           const scaleX = node.scaleX();
           const scaleY = node.scaleY();
@@ -140,16 +157,18 @@ const VideoObj = ({ layer, isPlaying, currentTime, isSelected, onSelect, onChang
 
 // --- IMAGE ELEMENT WRAPPER ---
 const ImageObj = ({ layer, isSelected, onSelect, onChange, currentTime }) => {
-  const [image] = useState(new window.Image());
+  const [imageObj, setImageObj] = useState(null);
   const shapeRef = useRef();
   const trRef = useRef();
 
   useEffect(() => {
-    image.src = layer.src;
-    image.crossOrigin = 'anonymous';
-    image.onload = () => {
-       if (shapeRef.current) shapeRef.current.getLayer().batchDraw();
-    }
+      const img = new window.Image();
+      img.src = layer.src;
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+         setImageObj(img);
+         if (shapeRef.current) shapeRef.current.getLayer().batchDraw();
+      };
   }, [layer.src]);
 
   useEffect(() => {
@@ -165,7 +184,7 @@ const ImageObj = ({ layer, isSelected, onSelect, onChange, currentTime }) => {
     <>
       <Image
         ref={shapeRef}
-        image={image}
+        image={imageObj}
         x={layer.x}
         y={layer.y}
         width={layer.width}
@@ -179,7 +198,7 @@ const ImageObj = ({ layer, isSelected, onSelect, onChange, currentTime }) => {
         offsetY={layer.height/2}
         onClick={onSelect}
         onDragEnd={(e) => onChange({ x: e.target.x(), y: e.target.y() })}
-        onTransformEnd={(e) => {
+        onTransformEnd={() => {
           const node = shapeRef.current;
           const scaleX = node.scaleX();
           const scaleY = node.scaleY();
@@ -230,7 +249,7 @@ const TextObj = ({ layer, isSelected, onSelect, onChange, currentTime }) => {
                 draggable={isSelected}
                 onClick={onSelect}
                 onDragEnd={(e) => onChange({ x: e.target.x(), y: e.target.y() })}
-                onTransformEnd={(e) => {
+                onTransformEnd={() => {
                    const node = shapeRef.current;
                    onChange({
                        x: node.x(),
@@ -273,7 +292,7 @@ const ShapeObj = ({ layer, isSelected, onSelect, onChange, currentTime }) => {
         draggable: isSelected,
         onClick: onSelect,
         onDragEnd: (e) => onChange({ x: e.target.x(), y: e.target.y() }),
-        onTransformEnd: (e) => {
+        onTransformEnd: () => {
             const node = shapeRef.current;
             const scaleX = node.scaleX();
             const scaleY = node.scaleY();
@@ -346,7 +365,7 @@ export const EditorCanvas = () => {
 
              // Fallback for other "Element" types mapped to images or shapes
              if (layer.type === 'element') {
-                if (layer.subtype === 'image' || layer.subtype.includes('icon')) return <ImageObj key={layer.id} layer={layer} currentTime={currentTime} isSelected={isSelected} onSelect={handleSelect} onChange={handleChange} />;
+                if (layer.subtype === 'image' || (layer.subtype && layer.subtype.includes('icon'))) return <ImageObj key={layer.id} layer={layer} currentTime={currentTime} isSelected={isSelected} onSelect={handleSelect} onChange={handleChange} />;
                 if (layer.shape) return <ShapeObj key={layer.id} layer={layer} currentTime={currentTime} isSelected={isSelected} onSelect={handleSelect} onChange={handleChange} />;
                 // Default Text Elements
                 if (layer.text || layer.content) return <TextObj key={layer.id} layer={layer} currentTime={currentTime} isSelected={isSelected} onSelect={handleSelect} onChange={handleChange} />;
