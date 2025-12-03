@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { Queue } = require('bullmq');
+const { Queue, Job } = require('bullmq');
 const IORedis = require('ioredis');
 
 const app = express();
@@ -42,6 +42,42 @@ app.POST('/api/render', async (req, res) => {
 
     } catch (error) {
         console.error('Error queuing job:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.get('/api/jobs/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const job = await Job.fromId(renderQueue, id);
+
+        if (!job) {
+            return res.status(404).json({ error: 'Job not found' });
+        }
+
+        const state = await job.getState();
+
+        if (state === 'completed') {
+            return res.json({
+                status: 'completed',
+                result: job.returnvalue
+            });
+        }
+
+        if (state === 'failed') {
+            return res.json({
+                status: 'failed',
+                error: job.failedReason
+            });
+        }
+
+        return res.json({
+            status: 'pending',
+            progress: job.progress
+        });
+
+    } catch (error) {
+        console.error(`Error fetching job ${req.params.id}:`, error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
