@@ -1,0 +1,20 @@
+{
+  "name": "onera-worker",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.18.0",
+    "@remotion/bundler": "^4.0.380",
+    "@remotion/renderer": "^4.0.380",
+    "bullmq": "^5.65.1",
+    "dotenv": "^16.3.1",
+    "ioredis": "^5.8.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.380"
+  }
+}
