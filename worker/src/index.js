@@ -1,4 +1,5 @@
 const { Worker } = require('bullmq');
+require("dotenv").config();
 const { bundle } = require('@remotion/bundler');
 const { selectComposition, renderMedia } = require('@remotion/renderer');
 const path = require('path');
@@ -10,6 +11,8 @@ const { Storage } = require('@google-cloud/storage');
 const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
     maxRetriesPerRequest: null,
 });
+
+console.log("Cred path:", process.env.GOOGLE_APPLICATION_CREDENTIALS);
 
 // Setup GCS
 const storage = new Storage();

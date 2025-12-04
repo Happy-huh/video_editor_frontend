@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+require("dotenv").config();
 const { Queue, Job } = require('bullmq');
 const IORedis = require('ioredis');
 const { Storage } = require('@google-cloud/storage');
@@ -21,13 +22,14 @@ const renderQueue = new Queue('render-queue', { connection });
 
 // Setup Google Cloud Storage
 const storage = new Storage();
-const bucketName = process.env.GCP_BUCKET_NAME || 'onera-assets'; // Default fallback or error
+const bucketName = process.env.GCP_BUCKET_NAME || 'real_merge_app'; // Default fallback or error
+console.log("Cred path:", process.env.GOOGLE_APPLICATION_CREDENTIALS);
 
 app.get('/', (req, res) => {
   res.send('Onera API is running');
 });
 
-app.POST('/api/assets/sign', async (req, res) => {
+app.post('/api/assets/sign', async (req, res) => {
     try {
         const { filename, contentType } = req.body;
 
@@ -53,7 +55,7 @@ app.POST('/api/assets/sign', async (req, res) => {
     }
 });
 
-app.POST('/api/render', async (req, res) => {
+app.post('/api/render', async (req, res) => {
     try {
         const { layers } = req.body;
 
