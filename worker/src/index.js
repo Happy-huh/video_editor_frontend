@@ -1,5 +1,4 @@
 const { Worker } = require('bullmq');
-require("dotenv").config();
 const { bundle } = require('@remotion/bundler');
 const { selectComposition, renderMedia } = require('@remotion/renderer');
 const path = require('path');
@@ -11,8 +10,6 @@ const { Storage } = require('@google-cloud/storage');
 const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
     maxRetriesPerRequest: null,
 });
-
-console.log("Cred path:", process.env.GOOGLE_APPLICATION_CREDENTIALS);
 
 // Setup GCS
 const storage = new Storage();
@@ -48,6 +45,14 @@ const worker = new Worker('render-queue', async (job) => {
         const outputLocation = path.join(os.tmpdir(), `${job.id}.mp4`);
         console.log(`Rendering to ${outputLocation}...`);
 
+        // CALCULATE DURATION
+        // Find the layer that ends the latest
+        const maxDurationSeconds = job.data.layers.reduce((max, layer) => Math.max(max, layer.end || 0), 0);
+        // Convert to frames (min 1 sec to avoid errors)
+        const durationInFrames = Math.max(30, Math.ceil(maxDurationSeconds * 30));
+
+        console.log(`Calculated duration: ${durationInFrames} frames (${maxDurationSeconds}s)`);
+
         await renderMedia({
             composition,
             serveUrl: bundleLocation,
@@ -56,6 +61,7 @@ const worker = new Worker('render-queue', async (job) => {
             inputProps: {
                 layers: job.data.layers
             },
+            durationInFrames: durationInFrames, // <--- CRITICAL OVERRIDE
         });
 
         console.log(`Render complete: ${outputLocation}`);

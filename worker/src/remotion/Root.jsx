@@ -8,13 +8,11 @@ export const RemotionRoot = () => {
       <Composition
         id="MainSequence"
         component={VideoComposition}
-        durationInFrames={300} // This is a default. Overridden by inputProps if passed.
+        durationInFrames={300} // Default only. Will be overridden by renderMedia()
         fps={30}
         width={1920}
         height={1080}
-        defaultProps={{
-          layers: []
-        }}
+        defaultProps={{ layers: [] }}
       />
     </>
   );
