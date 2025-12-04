@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: onera_postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: onera
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: onera_redis
+    ports:
+      - "6379:6379"
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: onera_server
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/onera
+      - REDIS_URL=redis://redis:6379
+      - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: onera_worker
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+    depends_on:
+      - redis
+
+volumes:
+  postgres_data:
