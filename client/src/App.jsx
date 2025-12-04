@@ -191,13 +191,35 @@ const EditorProvider = ({ children }) => {
   }, [isPlaying, duration]);
 
   const handleUpload = async (file, typeOverride = null) => {
-    const url = URL.createObjectURL(file);
-    const type = typeOverride || (file.type.startsWith('image/') ? 'image' : 'video');
-    const newAsset = { id: generateId(), src: url, type, name: file.name };
-    setMediaAssets(prev => [newAsset, ...prev]);
-    if (typeOverride === 'element-image') {
-        addLayer('element', 'Image', { subtype: 'image', src: url, style: { width: '200px', height: '200px', left: '50%', top: '50%' } });
-    } else { setVideoUrl(url); addToTimeline(newAsset); }
+    try {
+      // 1. Get Signed URL
+      const signRes = await fetch('http://localhost:3000/api/assets/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, contentType: file.type }),
+      });
+      const { uploadUrl, publicUrl } = await signRes.json();
+
+      // 2. Upload File
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type }
+      });
+
+      // 3. Use Public URL
+      const url = publicUrl;
+      const type = typeOverride || (file.type.startsWith('image/') ? 'image' : 'video');
+      const newAsset = { id: generateId(), src: url, type, name: file.name };
+      setMediaAssets(prev => [newAsset, ...prev]);
+      if (typeOverride === 'element-image') {
+          addLayer('element', 'Image', { subtype: 'image', src: url, style: { width: '200px', height: '200px', left: '50%', top: '50%' } });
+      } else { setVideoUrl(url); addToTimeline(newAsset); }
+
+    } catch (err) {
+      console.error('Upload failed:', err);
+      alert('Upload failed. See console.');
+    }
   };
 
   const addToTimeline = (asset) => {
@@ -276,7 +298,138 @@ const useEditor = () => useContext(EditorContext);
 
 // --- COMPONENTS ---
 
-const ExportModal = ({ isOpen, onClose }) => (!isOpen ? null : <div className="modal-overlay"><div className="modal-content"><div className="modal-header"><span>Exporting</span><button onClick={onClose}><X size={20}/></button></div><div className="modal-body"><div style={{textAlign:'center', padding:40}}>Export logic here...</div></div></div></div>);
+const ExportModal = ({ isOpen, onClose }) => {
+  const { layers } = useEditor();
+  const [status, setStatus] = useState('idle'); // idle, queued, pending, completed, failed
+  const [jobId, setJobId] = useState(null);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      // Reset state when closed
+      setStatus('idle');
+      setJobId(null);
+      setResult(null);
+      setError(null);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    let interval;
+    if (jobId && (status === 'queued' || status === 'pending')) {
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch(`http://localhost:3000/api/jobs/${jobId}`);
+          const data = await res.json();
+
+          if (data.status === 'completed') {
+            setStatus('completed');
+            setResult(data.result);
+            clearInterval(interval);
+          } else if (data.status === 'failed') {
+            setStatus('failed');
+            setError(data.error);
+            clearInterval(interval);
+          } else {
+            setStatus('pending');
+          }
+        } catch (err) {
+          console.error('Polling error:', err);
+        }
+      }, 2000);
+    }
+    return () => clearInterval(interval);
+  }, [jobId, status]);
+
+  const startExport = async () => {
+    try {
+      setStatus('queued');
+      setError(null);
+      const res = await fetch('http://localhost:3000/api/render', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ layers }),
+      });
+      const data = await res.json();
+      if (data.jobId) {
+        setJobId(data.jobId);
+      } else {
+        setStatus('failed');
+        setError('Failed to start job');
+      }
+    } catch (err) {
+      setStatus('failed');
+      setError(err.message);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <span>Export Video</span>
+          <button onClick={onClose}><X size={20}/></button>
+        </div>
+        <div className="modal-body">
+          {status === 'idle' && (
+            <div style={{textAlign:'center', padding:20}}>
+              <p style={{marginBottom: 20, color: '#ccc'}}>Ready to render your masterpiece?</p>
+              <button className="btn-primary" onClick={startExport} style={{width:'100%', justifyContent:'center'}}>
+                Start Rendering
+              </button>
+            </div>
+          )}
+
+          {(status === 'queued' || status === 'pending') && (
+            <div style={{textAlign:'center', padding:40, display:'flex', flexDirection:'column', alignItems:'center', gap:15}}>
+              <Loader2 className="animate-spin" size={48} color="var(--accent)"/>
+              <div>
+                <div style={{fontWeight:'bold', fontSize:18}}>Rendering...</div>
+                <div style={{color:'#888', fontSize:14}}>This may take a few moments</div>
+              </div>
+            </div>
+          )}
+
+          {status === 'completed' && (
+            <div style={{textAlign:'center', padding:20}}>
+              <div style={{width:60, height:60, background:'#22c55e', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px'}}>
+                <Check size={32} color="white"/>
+              </div>
+              <h3 style={{marginBottom:10}}>Render Complete!</h3>
+              <p style={{marginBottom:20, color:'#aaa'}}>Your video is ready to download.</p>
+
+              {result?.videoUrl && (
+                <div style={{background:'#111', padding:10, borderRadius:8, marginBottom:20, wordBreak:'break-all', fontSize:12, fontFamily:'monospace', color:'#aaa'}}>
+                  {result.videoUrl}
+                </div>
+              )}
+
+              <button className="btn-primary" style={{background:'#22c55e'}} onClick={() => window.open(result?.videoUrl || '#', '_blank')}>
+                <Download size={18}/> Download Video
+              </button>
+            </div>
+          )}
+
+          {status === 'failed' && (
+            <div style={{textAlign:'center', padding:20}}>
+              <div style={{width:60, height:60, background:'#ef4444', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px'}}>
+                <X size={32} color="white"/>
+              </div>
+              <h3 style={{marginBottom:10, color:'#ef4444'}}>Render Failed</h3>
+              <p style={{color:'#aaa', marginBottom:20}}>{error || 'An unexpected error occurred.'}</p>
+              <button className="btn-primary" onClick={startExport} style={{background:'#333'}}>
+                Try Again
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 const GenModal = ({ isOpen, onClose }) => (!isOpen ? null : <div className="modal-overlay"><div className="modal-content"><div style={{padding:40}}>AI Gen Logic... <button onClick={onClose}>Close</button></div></div></div>);
 
 const Sidebar = () => {
