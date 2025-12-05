@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Sequence, Video, Img, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Sequence, Video, Img, useVideoConfig, useCurrentFrame } from 'remotion';
 import {
   Play, Pause, Type, Video as VideoIcon, Music, Scissors,
   Wand2, Download, ChevronLeft, Layers,
@@ -55,6 +55,26 @@ const getClayStyle = (bg = '#333', color = '#fff', radius = '16px') => ({
 });
 
 const iconMap = { 'Youtube': Youtube, 'Instagram': Instagram, 'Facebook': Facebook, 'Twitter': Twitter, 'Check': Check, 'Message': MessageCircle, 'Star': Star, 'Music': Music, 'Zap': Zap, 'Bell': Bell, 'ShoppingBag': ShoppingBag };
+
+// Stopwatch Helper
+const Stopwatch = ({ startSeconds, style }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const currentTime = frame / fps;
+  const elapsed = Math.max(0, currentTime); // Relative to the sequence start
+
+  const totalSeconds = Math.floor(elapsed);
+  const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+  const secs = (totalSeconds % 60).toString().padStart(2, '0');
+  const millis = Math.floor((elapsed % 1) * 100).toString().padStart(2, '0');
+  const timeString = `${mins}:${secs}.${millis}`;
+
+  return (
+    <div style={{fontFamily:'monospace', display:'flex', alignItems:'center', justifyContent:'center', height:'100%', width:'100%', ...style}}>
+      {timeString}
+    </div>
+  );
+};
 
 export const VideoComposition = ({ layers }) => {
   const { fps } = useVideoConfig();
@@ -123,7 +143,9 @@ export const VideoComposition = ({ layers }) => {
                     {layer.subtype === 'clay-glass' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}></div>}
                     {layer.subtype === 'clay-frame-phone' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}><div style={{width:'90%', height:'95%', background:'black', borderRadius:20}}></div></div>}
 
-                    {layer.subtype === 'widget-stopwatch' && (<div style={{fontFamily:'monospace', display:'flex', alignItems:'center', justifyContent:'center', height:'100%', width:'100%'}}>00:00.00</div>)}
+                    {layer.subtype === 'widget-stopwatch' && (
+                        <Stopwatch startSeconds={layer.start} />
+                    )}
                     {layer.subtype === 'widget-qr' && <img src={layer.src} alt="qr" style={{width:'100%', height:'100%'}} />}
                     {layer.subtype === 'icon' && IconComp && <IconComp style={{width:'100%', height:'100%', color: layer.style.color}} />}
 
