@@ -35,16 +35,22 @@ const styles = `
       inset -2px -2px 5px rgba(0, 0, 0, 0.2);
   }
 
-  .motion-lower-third-bar { animation: lowerThirdBar 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-  .motion-text-reveal { animation: textReveal 0.8s 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; clip-path: inset(0 100% 0 0); }
-  .motion-enter-slide-left { animation: slideInLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-  .motion-health-anim { animation: health-drain 5s linear infinite alternate; }
-  .overlay-vhs { background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 2px, 3px 100%; pointer-events: none; mix-blend-mode: overlay; }
-
+  /* ANIMATIONS */
   @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
   @keyframes lowerThirdBar { 0% { width: 0; } 100% { width: 100%; } }
   @keyframes textReveal { 0% { clip-path: inset(0 100% 0 0); } 100% { clip-path: inset(0 0 0 0); } }
   @keyframes health-drain { 0% { width: 100%; } 50% { width: 60%; } 100% { width: 30%; } }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  /* MOTION CLASSES */
+  .motion-enter-slide-left { animation: slideInLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .motion-lower-third-bar { animation: lowerThirdBar 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .motion-text-reveal { animation: textReveal 0.8s 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; clip-path: inset(0 100% 0 0); }
+  .motion-health-anim { animation: health-drain 5s linear infinite alternate; }
+  .animate-spin { animation: spin 1s linear infinite; }
+
+  /* OVERLAYS */
+  .overlay-vhs { background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 2px, 3px 100%; pointer-events: none; mix-blend-mode: overlay; }
 `;
 
 const getClayStyle = (bg = '#333', color = '#fff', radius = '16px') => ({
@@ -56,24 +62,20 @@ const getClayStyle = (bg = '#333', color = '#fff', radius = '16px') => ({
 
 const iconMap = { 'Youtube': Youtube, 'Instagram': Instagram, 'Facebook': Facebook, 'Twitter': Twitter, 'Check': Check, 'Message': MessageCircle, 'Star': Star, 'Music': Music, 'Zap': Zap, 'Bell': Bell, 'ShoppingBag': ShoppingBag };
 
-// Stopwatch Helper
-const Stopwatch = ({ startSeconds, style }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const currentTime = frame / fps;
-  const elapsed = Math.max(0, currentTime); // Relative to the sequence start
+// Helper component for Stopwatch to use hooks safely
+const Stopwatch = () => {
+    const frame = useCurrentFrame();
+    const { fps } = useVideoConfig();
 
-  const totalSeconds = Math.floor(elapsed);
-  const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
-  const secs = (totalSeconds % 60).toString().padStart(2, '0');
-  const millis = Math.floor((elapsed % 1) * 100).toString().padStart(2, '0');
-  const timeString = `${mins}:${secs}.${millis}`;
+    // frame is relative to the Sequence start, so it represents duration active
+    const timeInSeconds = frame / fps;
 
-  return (
-    <div style={{fontFamily:'monospace', display:'flex', alignItems:'center', justifyContent:'center', height:'100%', width:'100%', ...style}}>
-      {timeString}
-    </div>
-  );
+    const totalSeconds = Math.floor(timeInSeconds);
+    const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+    const secs = (totalSeconds % 60).toString().padStart(2, '0');
+    const millis = Math.floor((timeInSeconds % 1) * 100).toString().padStart(2, '0');
+
+    return <>{`${mins}:${secs}.${millis}`}</>;
 };
 
 export const VideoComposition = ({ layers }) => {
@@ -143,9 +145,7 @@ export const VideoComposition = ({ layers }) => {
                     {layer.subtype === 'clay-glass' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}></div>}
                     {layer.subtype === 'clay-frame-phone' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}><div style={{width:'90%', height:'95%', background:'black', borderRadius:20}}></div></div>}
 
-                    {layer.subtype === 'widget-stopwatch' && (
-                        <Stopwatch startSeconds={layer.start} />
-                    )}
+                    {layer.subtype === 'widget-stopwatch' && (<div style={{fontFamily:'monospace', display:'flex', alignItems:'center', justifyContent:'center', height:'100%', width:'100%'}}><Stopwatch /></div>)}
                     {layer.subtype === 'widget-qr' && <img src={layer.src} alt="qr" style={{width:'100%', height:'100%'}} />}
                     {layer.subtype === 'icon' && IconComp && <IconComp style={{width:'100%', height:'100%', color: layer.style.color}} />}
 
