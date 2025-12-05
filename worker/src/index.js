@@ -59,7 +59,8 @@ const worker = new Worker('render-queue', async (job) => {
             codec: 'h264',
             outputLocation,
             inputProps: {
-                layers: job.data.layers
+                layers: job.data.layers,
+                durationInFrames: durationInFrames // ALSO pass to inputProps so Root can see it if needed
             },
             durationInFrames: durationInFrames, // <--- CRITICAL OVERRIDE
         });
