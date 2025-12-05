@@ -27,7 +27,7 @@ app.get('/', (req, res) => {
   res.send('Onera API is running');
 });
 
-app.POST('/api/assets/sign', async (req, res) => {
+app.post('/api/assets/sign', async (req, res) => {
     try {
         const { filename, contentType } = req.body;
 
@@ -53,7 +53,7 @@ app.POST('/api/assets/sign', async (req, res) => {
     }
 });
 
-app.POST('/api/render', async (req, res) => {
+app.post('/api/render', async (req, res) => {
     try {
         const { layers } = req.body;
 
