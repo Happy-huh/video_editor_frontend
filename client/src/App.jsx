@@ -10,7 +10,8 @@ import {
   Ghost, Loader2, Lock, Unlock, Eye, EyeOff, Volume2, VolumeX, Magnet, Split,
   LayoutTemplate, Gamepad2, Tv, User, Check, MessageCircle, Share2, Battery,
   Smartphone, Monitor, Menu, Cpu, Terminal, FileVideo, AlertTriangle,
-  ShoppingBag, Tag, Percent, ArrowRight
+  ShoppingBag, Tag, Percent, ArrowRight,
+  Loader
 } from 'lucide-react';
 
 // --- STYLES & ANIMATIONS ---
@@ -42,14 +43,42 @@ const styles = `
 
   .app-container { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
-  /* SIDEBAR */
-  .sidebar { width: 70px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding-top: 16px; z-index: 20; }
+  /* SIDEBAR - ALWAYS FIXED LEFT */
+  .sidebar { 
+    width: 70px; 
+    background: var(--bg-panel); 
+    border-right: 1px solid var(--border); 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    padding-top: 16px; 
+    z-index: 20; 
+    flex-shrink: 0; 
+  }
   .nav-item { width: 50px; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; font-size: 10px; gap: 4px; color: var(--text-muted); }
   .nav-item:hover { background: var(--bg-panel-light); color: var(--text-main); }
   .nav-item.active { background: rgba(125, 85, 255, 0.1); color: var(--accent); }
 
-  /* DRAWER */
-  .drawer { width: 340px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; overflow-y: auto; position: relative; z-index: 10; transition: transform 0.3s ease; }
+  /* DRAWER - Fixed Width */
+  .drawer { 
+    width: 340px; 
+    background: var(--bg-panel); 
+    border-right: 1px solid var(--border); 
+    display: flex; 
+    flex-direction: column; 
+    padding: 20px; 
+    overflow-y: auto; 
+    position: relative; 
+    z-index: 10; 
+    transition: transform 0.3s ease;
+    flex-shrink: 0; 
+  }
+  
+  /* Responsive Drawer: Shrink slightly on mobile */
+  @media (max-width: 800px) {
+    .drawer { width: 260px; padding: 10px; }
+  }
+
   .tool-group { margin-bottom: 30px; }
   .tool-group h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #eee; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #333; padding-bottom: 8px; }
   
@@ -82,19 +111,21 @@ const styles = `
   @keyframes lowerThirdBar { 0% { width: 0; } 100% { width: 100%; } }
   @keyframes textReveal { 0% { clip-path: inset(0 100% 0 0); } 100% { clip-path: inset(0 0 0 0); } }
   @keyframes health-drain { 0% { width: 100%; } 50% { width: 60%; } 100% { width: 30%; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* MOTION CLASSES */
+  .animate-spin { animation: spin 1s linear infinite; }
   .motion-enter-slide-left { animation: slideInLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   .motion-lower-third-bar { animation: lowerThirdBar 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   .motion-text-reveal { animation: textReveal 0.8s 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; clip-path: inset(0 100% 0 0); }
   .motion-health-anim { animation: health-drain 5s linear infinite alternate; }
 
   /* WORKSPACE & CANVAS */
-  .workspace { flex: 1; display: flex; flex-direction: column; position: relative; height: 100%; }
-  .header { height: 60px; background: var(--bg-dark); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+  .workspace { flex: 1; display: flex; flex-direction: column; position: relative; height: 100%; min-width: 0; }
+  .header { height: 60px; background: var(--bg-dark); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; flex-shrink: 0; }
   .export-btn { background: var(--text-main); color: black; padding: 8px 16px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
   
-  /* CANVAS AREA REWORKED FOR SCALING */
+  /* CANVAS AREA - FLEX CENTER */
   .canvas-area { 
     flex: 1; 
     background: #000; 
@@ -103,14 +134,14 @@ const styles = `
     justify-content: center; 
     position: relative; 
     overflow: hidden; 
-    padding: 40px; /* Padding for the scaled canvas */
   }
   
+  /* SCALER: THE SIMULATION ENGINE */
   .canvas-scaler {
     transform-origin: center center;
-    box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    box-shadow: 0 0 100px rgba(0,0,0,0.8); /* Make it pop against the background */
     background: #000;
-    overflow: hidden;
+    overflow: hidden; /* CLIP CONTENT STRICTLY */
     position: relative;
   }
 
@@ -159,6 +190,38 @@ const styles = `
   .modal-content { background: var(--bg-panel); width: 500px; padding: 0; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden; }
   .modal-header { padding: 16px 24px; font-size: 18px; font-weight: bold; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; }
   .modal-body { padding: 24px; }
+
+  /* RESPONSIVE LAYOUT ADJUSTMENTS */
+  @media (max-width: 800px) {
+    .app-container {
+      flex-direction: column;
+    }
+    
+    /* Workspace moves to Top */
+    .workspace {
+      order: 1;
+      width: 100%;
+      height: 60vh; /* Give canvas space */
+      flex: none;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Drawer moves to Middle */
+    .drawer {
+      order: 2;
+      width: 100%;
+      height: 30vh;
+      border-right: none;
+      border-top: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    /* Sidebar stays on left but we want it to be vertical on the side?
+       Wait, the user said: "make the sidebar consistent no matter view port i.e ... the side bar remains on the side".
+       If container is column, sidebar on side is hard unless it's absolute or grid.
+       Let's use Grid for mobile to keep sidebar left.
+    */
+  }
 `;
 
 // --- UTILS & HELPERS ---
@@ -316,7 +379,7 @@ const useEditor = () => useContext(EditorContext);
 // --- COMPONENTS ---
 
 const ExportModal = ({ isOpen, onClose }) => {
-  const { layers } = useEditor();
+  const { layers, canvasSettings } = useEditor();
   const [status, setStatus] = useState('idle');
   const [jobId, setJobId] = useState(null);
   const [result, setResult] = useState(null);
@@ -348,7 +411,7 @@ const ExportModal = ({ isOpen, onClose }) => {
       const res = await fetch('http://localhost:3000/api/render', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ layers }),
+        body: JSON.stringify({ layers, canvasSettings }),
       });
       const data = await res.json();
       if (data.jobId) setJobId(data.jobId); else { setStatus('failed'); setError('Failed to start job'); }
@@ -363,7 +426,7 @@ const ExportModal = ({ isOpen, onClose }) => {
         <div className="modal-header"><span>Export Video</span><button onClick={onClose}><X size={20}/></button></div>
         <div className="modal-body">
           {status === 'idle' && (<div style={{textAlign:'center', padding:20}}><p style={{marginBottom: 20, color: '#ccc'}}>Ready to render your masterpiece?</p><button className="btn-primary" onClick={startExport} style={{width:'100%', justifyContent:'center'}}>Start Rendering</button></div>)}
-          {(status === 'queued' || status === 'pending') && (<div style={{textAlign:'center', padding:40, display:'flex', flexDirection:'column', alignItems:'center', gap:15}}><Loader2 className="animate-spin" size={48} color="var(--accent)"/><div><div style={{fontWeight:'bold', fontSize:18}}>Rendering...</div><div style={{color:'#888', fontSize:14}}>This may take a few moments</div></div></div>)}
+          {(status === 'queued' || status === 'pending') && (<div style={{textAlign:'center', padding:40, display:'flex', flexDirection:'column', alignItems:'center', gap:15}}><Loader className="animate-spin" size={48} color="var(--accent)"/><div><div style={{fontWeight:'bold', fontSize:18}}>Rendering...</div><div style={{color:'#888', fontSize:14}}>This may take a few moments</div></div></div>)}
           {status === 'completed' && (<div style={{textAlign:'center', padding:20}}><div style={{width:60, height:60, background:'#22c55e', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px'}}><Check size={32} color="white"/></div><h3 style={{marginBottom:10}}>Render Complete!</h3><p style={{marginBottom:20, color:'#aaa'}}>Your video is ready to download.</p>{result?.videoUrl && (<div style={{background:'#111', padding:10, borderRadius:8, marginBottom:20, wordBreak:'break-all', fontSize:12, fontFamily:'monospace', color:'#aaa'}}>{result.videoUrl}</div>)}<button className="btn-primary" style={{background:'#22c55e'}} onClick={() => window.open(result?.videoUrl || '#', '_blank')}><Download size={18}/> Download Video</button></div>)}
           {status === 'failed' && (<div style={{textAlign:'center', padding:20}}><div style={{width:60, height:60, background:'#ef4444', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px'}}><X size={32} color="white"/></div><h3 style={{marginBottom:10, color:'#ef4444'}}>Render Failed</h3><p style={{color:'#aaa', marginBottom:20}}>{error || 'An unexpected error occurred.'}</p><button className="btn-primary" onClick={startExport} style={{background:'#333'}}>Try Again</button></div>)}
         </div>
@@ -378,32 +441,150 @@ const Sidebar = () => {
   const selectedLayer = layers.find(l => l.id === selectedLayerId);
   const handleTabClick = (id) => setActiveTab(activeTab === id ? null : id);
 
-  // ... (Tabs content same as before, simplified for brevity but fully functional in logic)
   const renderTemplates = () => (
     <div>
       <div className="tool-group">
         <h3>Classic Motion</h3>
-        <button className="tool-btn" onClick={() => addLayer('element', 'Clean News', { subtype: 'motion-lower-third', style: { width: '400px', height: '100px', left: '50%', top: '50%' }, primaryText: 'Breaking News', secondaryText: 'Live from the Studio' })}><LayoutTemplate size={16}/> Clean News</button>
-        <button className="tool-btn" onClick={() => addLayer('element', 'Neon Gamer', { subtype: 'motion-lower-third-neon', style: { width: '400px', height: '100px', left: '50%', top: '50%' }, primaryText: 'StreamerName', secondaryText: '@social_handle' })}><Gamepad2 size={16}/> Neon Gamer</button>
-        <button className="tool-btn" onClick={() => addLayer('element', 'Minimal Corp', { subtype: 'motion-lower-third-corp', style: { width: '400px', height: '80px', left: '50%', top: '50%' }, primaryText: 'John Doe', secondaryText: 'CEO & Founder' })}><User size={16}/> Minimal Corp</button>
-        <button className="tool-btn" onClick={() => addLayer('element', 'Tweet', { subtype: 'motion-tweet', style: { width: '400px', height: '150px', left: '50%', top: '50%' }, primaryText: 'User Name', secondaryText: 'Just launched my new video! #viral' })}><Twitter size={16}/> Tweet Overlay</button>
-        <button className="tool-btn" onClick={() => addLayer('element', 'Health Bar', { subtype: 'motion-health-bar', style: { width: '400px', height: '40px', left: '50%', top: '50%' } })}><Battery size={16}/> Dynamic Health</button>
+        <button className="tool-btn" title="Classic Clean News lower third" onClick={() => addLayer('element', 'Clean News', { subtype: 'motion-lower-third', style: { width: '400px', height: '100px', left: '50%', top: '50%' }, primaryText: 'Breaking News', secondaryText: 'Live from the Studio' })}><LayoutTemplate size={16}/> Clean News</button>
+        <button className="tool-btn" title="Neon style lower third for gamers" onClick={() => addLayer('element', 'Neon Gamer', { subtype: 'motion-lower-third-neon', style: { width: '400px', height: '100px', left: '50%', top: '50%' }, primaryText: 'StreamerName', secondaryText: '@social_handle' })}><Gamepad2 size={16}/> Neon Gamer</button>
+        <button className="tool-btn" title="Minimal corporate lower third" onClick={() => addLayer('element', 'Minimal Corp', { subtype: 'motion-lower-third-corp', style: { width: '400px', height: '80px', left: '50%', top: '50%' }, primaryText: 'John Doe', secondaryText: 'CEO & Founder' })}><User size={16}/> Minimal Corp</button>
+        <button className="tool-btn" title="Animated tweet overlay" onClick={() => addLayer('element', 'Tweet', { subtype: 'motion-tweet', style: { width: '400px', height: '150px', left: '50%', top: '50%' }, primaryText: 'User Name', secondaryText: 'Just launched my new video! #viral' })}><Twitter size={16}/> Tweet Overlay</button>
+        <button className="tool-btn" title="Animated health bar" onClick={() => addLayer('element', 'Health Bar', { subtype: 'motion-health-bar', style: { width: '400px', height: '40px', left: '50%', top: '50%' } })}><Battery size={16}/> Dynamic Health</button>
       </div>
+
       <div className="tool-group">
         <h3>Social Promos</h3>
-        <button className="clay-preview-btn" onClick={() => addLayer('element', 'Sub Pill', { subtype: 'clay-pill', icon: 'Youtube', text: 'Subscribe', color: '#ff0000', style: { ...getClayStyle('#ff2222', '#fff', '40px'), width: '250px', height: '70px', left: '50%', top: '50%' } })}><div className="clay-icon-box" style={{background:'#d00'}}><Youtube size={16} color="white"/></div> Subscribe Pill</button>
-        {/* Add other templates as needed */}
+        <button className="clay-preview-btn" title="3D Clay Youtube Subscribe Pill" onClick={() => addLayer('element', 'Sub Pill', { subtype: 'clay-pill', icon: 'Youtube', text: 'Subscribe', color: '#ff0000', style: { ...getClayStyle('#ff2222', '#fff', '40px'), width: '250px', height: '70px', left: '50%', top: '50%' } })}>
+          <div className="clay-icon-box" style={{background:'#d00'}}><Youtube size={16} color="white"/></div> Subscribe Pill
+        </button>
+        <button className="clay-preview-btn" title="3D Clay Instagram Handle" onClick={() => addLayer('element', 'Insta Bubble', { subtype: 'clay-bubble', icon: 'Instagram', text: '@MyChannel', color: '#E1306C', style: { ...getClayStyle('#E1306C', '#fff', '20px'), width: '220px', height: '60px', left: '50%', top: '50%' } })}>
+          <div className="clay-icon-box" style={{background:'#C13584'}}><Instagram size={16} color="white"/></div> Insta Handle
+        </button>
+        <button className="clay-preview-btn" title="3D Clay Tweet Card" onClick={() => addLayer('element', 'Tweet Card', { subtype: 'clay-card', icon: 'Twitter', text: 'Just dropped a new video!', color: '#1DA1F2', style: { ...getClayStyle('#fff', '#333', '24px'), width: '400px', height: '150px', left: '50%', top: '50%' } })}>
+          <div className="clay-icon-box" style={{background:'#1DA1F2'}}><Twitter size={16} color="white"/></div> Tweet Float
+        </button>
+      </div>
+
+      <div className="tool-group">
+        <h3>Lower Thirds</h3>
+        <button className="clay-preview-btn" title="3D Clay News Blob" onClick={() => addLayer('element', 'News Blob', { subtype: 'clay-blob', text: 'BREAKING NEWS', subtext: 'Live coverage', style: { ...getClayStyle('#0055ff', '#fff', '30px'), width: '500px', height: '100px', left: '50%', top: '50%' } })}>
+          <div className="clay-icon-box" style={{background:'#0044cc'}}><Tv size={16} color="white"/></div> News Blob
+        </button>
+        <button className="clay-preview-btn" title="3D Clay Name Tag" onClick={() => addLayer('element', 'Name Tag', { subtype: 'clay-pill-split', text: 'JOHN DOE', subtext: 'CEO & Founder', style: { ...getClayStyle('#222', '#fff', '50px'), width: '350px', height: '80px', left: '50%', top: '50%' } })}>
+          <div className="clay-icon-box"><User size={16} color="white"/></div> Minimal Tag
+        </button>
+      </div>
+
+      <div className="tool-group">
+        <h3>Gaming HUD</h3>
+        <button className="clay-preview-btn" title="3D Clay Health Bar" onClick={() => addLayer('element', 'Health Bar', { subtype: 'clay-bar', val: 75, color: '#00ff00', style: { ...getClayStyle('#333', '#fff', '10px'), width: '300px', height: '40px', left: '50%', top: '50%' } })}>
+          <div className="clay-icon-box" style={{background:'#00aa00'}}><Battery size={16} color="white"/></div> Puffy Health
+        </button>
+        <button className="clay-preview-btn" title="3D Clay Score Bubble" onClick={() => addLayer('element', 'Score Bubble', { subtype: 'clay-circle-text', text: '1,240', style: { ...getClayStyle('#ffaa00', '#fff', '50%'), width: '100px', height: '100px', left: '50%', top: '50%' } })}>
+          <div className="clay-icon-box" style={{background:'#cc8800'}}><Star size={16} color="white"/></div> Score Pop
+        </button>
+        <button className="clay-preview-btn" title="3D Clay Facecam Border" onClick={() => addLayer('element', 'Cam Border', { subtype: 'clay-frame', style: { ...getClayStyle('transparent', '#fff', '30px'), border: '8px solid #7d55ff', width: '300px', height: '200px', left: '50%', top: '50%' } })}>
+          <div className="clay-icon-box"><Video size={16} color="white"/></div> Cam Border
+        </button>
+      </div>
+
+      <div className="tool-group">
+        <h3>Notifications</h3>
+        <button className="clay-preview-btn" title="3D Clay Success Toast" onClick={() => addLayer('element', 'Success Toast', { subtype: 'clay-toast', icon: 'Check', text: 'Download Complete', color: '#4ade80', style: { ...getClayStyle('#4ade80', '#004400', '20px'), width: '300px', height: '60px', left: '50%', top: '50%' } })}>
+          <div className="clay-icon-box" style={{background:'#22c55e'}}><Check size={16} color="white"/></div> Success Pop
+        </button>
+        <button className="clay-preview-btn" title="3D Clay Message Bubble" onClick={() => addLayer('element', 'Message Pop', { subtype: 'clay-toast', icon: 'Message', text: 'New Comment', color: '#fff', style: { ...getClayStyle('#fff', '#333', '20px'), width: '300px', height: '70px', left: '50%', top: '50%' } })}>
+          <div className="clay-icon-box" style={{background:'#ccc'}}><MessageCircle size={16} color="white"/></div> Msg Bubble
+        </button>
+      </div>
+
+      <div className="tool-group">
+        <h3>Shopping / Promo</h3>
+        <button className="clay-preview-btn" title="3D Clay Sale Tag" onClick={() => addLayer('element', 'Sale Tag', { subtype: 'clay-tag', text: '50% OFF', style: { ...getClayStyle('#ff4d4d', '#fff', '10px'), width: '150px', height: '60px', left: '50%', top: '50%' } })}>
+          <div className="clay-icon-box" style={{background:'#cc0000'}}><Percent size={16} color="white"/></div> Sale Tag
+        </button>
+        <button className="clay-preview-btn" title="3D Clay Buy Button" onClick={() => addLayer('element', 'Buy Button', { subtype: 'clay-button', text: 'SHOP NOW', style: { ...getClayStyle('#7d55ff', '#fff', '50px'), width: '200px', height: '60px', left: '50%', top: '50%' } })}>
+          <div className="clay-icon-box"><ShoppingBag size={16} color="white"/></div> Shop Button
+        </button>
       </div>
     </div>
   );
 
   const renderElements = () => (
     <div>
-        <div className="tool-group">
-            <h3>Widgets</h3>
-            <button className="tool-btn" onClick={() => addLayer('element', 'Stopwatch', { subtype: 'widget-stopwatch', style: { fontSize: '40px', fontWeight:'bold', color: 'white', left: '50%', top: '50%', background:'rgba(0,0,0,0.5)', padding:'5px 10px', borderRadius:8 } })}><Clock size={20}/> Stopwatch</button>
-            <button className="tool-btn" onClick={() => addLayer('element', 'VHS', { subtype: 'overlay-vhs', style: { width:'100%', height:'100%', left:'50%', top:'50%' } })}><Film size={20}/> VHS Overlay</button>
+      <div className="tool-group">
+        <h3>Widgets & Utilities</h3>
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
+            <button className="tool-btn" title="Real-time stopwatch overlay" style={{justifyContent:'center', flexDirection:'column', gap:4}} onClick={() => addLayer('element', 'Stopwatch', { subtype: 'widget-stopwatch', style: { fontSize: '40px', fontWeight:'bold', color: 'white', left: '50%', top: '50%', background:'rgba(0,0,0,0.5)', padding:'5px 10px', borderRadius:8 } })}><Clock size={20}/> Stopwatch</button>
+            <button className="tool-btn" title="Editable QR Code" style={{justifyContent:'center', flexDirection:'column', gap:4}} onClick={() => addLayer('element', 'QR Code', { subtype: 'widget-qr', src: 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=Onera', style: { width: '150px', height: '150px', left: '50%', top: '50%' } })}><QrCode size={20}/> QR Code</button>
+            <button className="tool-btn" title="Retro VHS noise effect" style={{justifyContent:'center', flexDirection:'column', gap:4}} onClick={() => addLayer('element', 'VHS', { subtype: 'overlay-vhs', style: { width:'100%', height:'100%', left:'50%', top:'50%' } })}><Film size={20}/> VHS Overlay</button>
         </div>
+      </div>
+
+       <div className="tool-group">
+        <h3>Social Icons</h3>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8}}>
+           {[
+               { icon: Youtube, name: 'Youtube', color: '#FF0000' }, 
+               { icon: Instagram, name: 'Instagram', color: '#E1306C' }, 
+               { icon: Facebook, name: 'Facebook', color: '#1877F2' }, 
+               { icon: Twitter, name: 'Twitter', color: '#1DA1F2' }
+           ].map(item => (<button key={item.name} className="tool-btn" title={`Add ${item.name} Icon`} style={{justifyContent:'center', padding:8}} onClick={() => addLayer('element', item.name, { subtype: 'icon', iconName: item.name, style: { color: item.color, width: '60px', height: '60px', left: '50%', top: '50%' } })}><item.icon size={20} color={item.color} /></button>))}
+        </div>
+      </div>
+
+      <div className="tool-group">
+        <h3>Shapes</h3>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:10}}>
+           <button className="clay-preview-btn" title="3D Clay Sphere" style={{flexDirection:'column'}} onClick={() => addLayer('element', 'Clay Sphere', { subtype: 'clay-shape', shape: 'circle', style: { ...getClayStyle('linear-gradient(135deg, #a5b4fc, #6366f1)', 'transparent', '50%'), width: '150px', height: '150px', left: '50%', top: '50%' } })}>
+             <div style={{width:30, height:30, borderRadius:'50%', background:'linear-gradient(135deg, #a5b4fc, #6366f1)', boxShadow:'2px 2px 5px rgba(0,0,0,0.2)'}}></div> Sphere
+           </button>
+           <button className="clay-preview-btn" title="3D Clay Cube" style={{flexDirection:'column'}} onClick={() => addLayer('element', 'Clay Cube', { subtype: 'clay-shape', shape: 'rect', style: { ...getClayStyle('linear-gradient(135deg, #fca5a5, #ef4444)', 'transparent', '25px'), width: '150px', height: '150px', left: '50%', top: '50%' } })}>
+             <div style={{width:30, height:30, borderRadius:'8px', background:'linear-gradient(135deg, #fca5a5, #ef4444)', boxShadow:'2px 2px 5px rgba(0,0,0,0.2)'}}></div> Cube
+           </button>
+           <button className="clay-preview-btn" title="3D Clay Pill" style={{flexDirection:'column'}} onClick={() => addLayer('element', 'Clay Pill', { subtype: 'clay-shape', shape: 'rect', style: { ...getClayStyle('linear-gradient(135deg, #86efac, #22c55e)', 'transparent', '100px'), width: '200px', height: '80px', left: '50%', top: '50%' } })}>
+             <div style={{width:40, height:15, borderRadius:'20px', background:'linear-gradient(135deg, #86efac, #22c55e)', boxShadow:'2px 2px 5px rgba(0,0,0,0.2)'}}></div> Pill
+           </button>
+        </div>
+      </div>
+
+      <div className="tool-group">
+        <h3>Containers & Frames</h3>
+        <button className="clay-preview-btn" title="Frosted Glass Card" onClick={() => addLayer('element', 'Glass Card', { subtype: 'clay-glass', style: { ...getClayStyle('rgba(255,255,255,0.1)', '#fff', '24px'), width: '400px', height: '250px', left: '50%', top: '50%', border:'1px solid rgba(255,255,255,0.5)' } })}>
+           <LayoutTemplate size={16}/> Frosted Glass
+        </button>
+        <button className="clay-preview-btn" title="3D Phone Mockup" onClick={() => addLayer('element', 'Phone Frame', { subtype: 'clay-frame-phone', style: { ...getClayStyle('#111', '#fff', '40px'), width: '300px', height: '600px', left: '50%', top: '50%', border:'8px solid #333' } })}>
+           <Smartphone size={16}/> Phone Mockup
+        </button>
+      </div>
+
+      <div className="tool-group">
+        <h3>Clay Emojis</h3>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:8}}>
+           <button className="clay-preview-btn" title="Fire Emoji" style={{justifyContent:'center'}} onClick={() => addLayer('element', 'Fire', { subtype: 'clay-emoji', content: '🔥', style: { ...getClayStyle('#ffaa55', '#fff', '50%'), width: '100px', height: '100px', fontSize:'50px', display:'flex', alignItems:'center', justifyContent:'center', left: '50%', top: '50%' } })}>🔥</button>
+           <button className="clay-preview-btn" title="Heart Emoji" style={{justifyContent:'center'}} onClick={() => addLayer('element', 'Heart', { subtype: 'clay-emoji', content: '❤️', style: { ...getClayStyle('#ffb3b3', '#fff', '50%'), width: '100px', height: '100px', fontSize:'50px', display:'flex', alignItems:'center', justifyContent:'center', left: '50%', top: '50%' } })}>❤️</button>
+           <button className="clay-preview-btn" title="100 Emoji" style={{justifyContent:'center'}} onClick={() => addLayer('element', '100', { subtype: 'clay-emoji', content: '💯', style: { ...getClayStyle('#ffffcc', '#fff', '50%'), width: '100px', height: '100px', fontSize:'40px', display:'flex', alignItems:'center', justifyContent:'center', left: '50%', top: '50%' } })}>💯</button>
+        </div>
+      </div>
+
+      <div className="tool-group">
+        <h3>Progress & Loading</h3>
+        <button className="clay-preview-btn" title="3D Loading Spinner" onClick={() => addLayer('element', 'Load Spinner', { subtype: 'clay-spinner', style: { ...getClayStyle('#222', '#7d55ff', '50%'), width: '80px', height: '80px', left: '50%', top: '50%' } })}>
+           <Loader2 size={16}/> Spinner
+        </button>
+        <button className="clay-preview-btn" title="3D Progress Bar" onClick={() => addLayer('element', 'Progress Bar', { subtype: 'clay-bar', val: 50, color: '#7d55ff', style: { ...getClayStyle('#222', '#fff', '20px'), width: '400px', height: '30px', left: '50%', top: '50%' } })}>
+           <ArrowRight size={16}/> Loading Bar
+        </button>
+      </div>
+
+      <div className="tool-group">
+        <h3>Floating Icons</h3>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:8}}>
+           <button className="clay-preview-btn" title="Floating Music Icon" style={{justifyContent:'center'}} onClick={() => addLayer('element', 'Music', { subtype: 'clay-icon-float', icon: 'Music', style: { ...getClayStyle('#d946ef', '#fff', '20px'), width: '80px', height: '80px', left: '50%', top: '50%' } })}><Music/></button>
+           <button className="clay-preview-btn" title="Floating Zap Icon" style={{justifyContent:'center'}} onClick={() => addLayer('element', 'Zap', { subtype: 'clay-icon-float', icon: 'Zap', style: { ...getClayStyle('#eab308', '#fff', '20px'), width: '80px', height: '80px', left: '50%', top: '50%' } })}><Zap/></button>
+           <button className="clay-preview-btn" title="Floating Bell Icon" style={{justifyContent:'center'}} onClick={() => addLayer('element', 'Bell', { subtype: 'clay-icon-float', icon: 'Bell', style: { ...getClayStyle('#ef4444', '#fff', '20px'), width: '80px', height: '80px', left: '50%', top: '50%' } })}><Bell/></button>
+        </div>
+      </div>
     </div>
   );
 
@@ -414,7 +595,15 @@ const Sidebar = () => {
   const renderAudio = () => (<div><h3>Audio</h3><label className="tool-btn" style={{cursor:'pointer'}}><Music size={16}/> Upload Audio File<input type="file" accept="audio/*" style={{display:'none'}} onChange={(e) => {if(e.target.files[0]) addLayer('audio', e.target.files[0].name, { file: e.target.files[0] });}}/></label></div>);
 
   const tabs = { settings: renderSettings, media: renderMedia, templates: renderTemplates, subtitles: renderSubtitles, text: renderText, audio: renderAudio, elements: renderElements };
-  const navItems = [ { id: 'settings', icon: Settings, label: 'Settings' }, { id: 'media', icon: ImageIcon, label: 'Media' }, { id: 'templates', icon: LayoutTemplate, label: 'Templates' }, { id: 'subtitles', icon: Subtitles, label: 'Subtitles' }, { id: 'text', icon: Type, label: 'Text' }, { id: 'elements', icon: Layers, label: 'Elements' }, { id: 'audio', icon: Music, label: 'Audio' } ];
+  const navItems = [
+    { id: 'settings', icon: Settings, label: 'Settings' },
+    { id: 'media', icon: ImageIcon, label: 'Media' },
+    { id: 'templates', icon: LayoutTemplate, label: 'Templates' }, 
+    { id: 'subtitles', icon: Subtitles, label: 'Subtitles' },
+    { id: 'text', icon: Type, label: 'Text' },
+    { id: 'elements', icon: Layers, label: 'Elements' },
+    { id: 'audio', icon: Music, label: 'Audio' },
+  ];
   
   return (
     <>
@@ -424,12 +613,44 @@ const Sidebar = () => {
       {activeTab && (
         <div className="drawer">
           {tabs[activeTab] ? tabs[activeTab]() : <div style={{color:'#888'}}>Tool not implemented</div>}
+          
           {selectedLayer && (
             <div style={{marginTop: 'auto', borderTop: '1px solid #333', paddingTop: 20}}>
                <div className="prop-row"><span style={{fontSize:12, color:'#888'}}>Edit: {selectedLayer.subtype || selectedLayer.content}</span></div>
-               {(selectedLayer.primaryText !== undefined || selectedLayer.text !== undefined) && ( <div className="tool-group"><div style={{fontSize:12, marginBottom:4}}>Main Text</div><input className="prop-input" value={selectedLayer.primaryText !== undefined ? selectedLayer.primaryText : selectedLayer.text} onChange={(e) => updateLayer(selectedLayer.id, selectedLayer.primaryText !== undefined ? { primaryText: e.target.value } : { text: e.target.value })} style={{width:'100%', marginBottom:8}} /></div> )}
-               {(selectedLayer.secondaryText !== undefined || selectedLayer.subtext !== undefined) && ( <div className="tool-group"><div style={{fontSize:12, marginBottom:4}}>Secondary Text</div><input className="prop-input" value={selectedLayer.secondaryText !== undefined ? selectedLayer.secondaryText : selectedLayer.subtext} onChange={(e) => updateLayer(selectedLayer.id, selectedLayer.secondaryText !== undefined ? { secondaryText: e.target.value } : { subtext: e.target.value })} style={{width:'100%'}} /></div> )}
-               {selectedLayer.content !== undefined && !selectedLayer.subtype?.includes('motion') && selectedLayer.type !== 'media' && ( <div className="tool-group"><div style={{fontSize:12, marginBottom:4}}>Content</div><textarea className="prop-input" value={selectedLayer.content} onChange={(e) => updateLayer(selectedLayer.id, { content: e.target.value })} style={{width:'100%', height:60}} /></div> )}
+               
+               {(selectedLayer.primaryText !== undefined || selectedLayer.text !== undefined) && (
+                 <div className="tool-group">
+                   <div style={{fontSize:12, marginBottom:4}}>Main Text</div>
+                   <input className="prop-input" 
+                     value={selectedLayer.primaryText !== undefined ? selectedLayer.primaryText : selectedLayer.text} 
+                     onChange={(e) => updateLayer(selectedLayer.id, selectedLayer.primaryText !== undefined ? { primaryText: e.target.value } : { text: e.target.value })} 
+                     style={{width:'100%', marginBottom:8}} 
+                   />
+                 </div>
+               )}
+
+               {(selectedLayer.secondaryText !== undefined || selectedLayer.subtext !== undefined) && (
+                 <div className="tool-group">
+                   <div style={{fontSize:12, marginBottom:4}}>Secondary Text</div>
+                   <input className="prop-input" 
+                     value={selectedLayer.secondaryText !== undefined ? selectedLayer.secondaryText : selectedLayer.subtext} 
+                     onChange={(e) => updateLayer(selectedLayer.id, selectedLayer.secondaryText !== undefined ? { secondaryText: e.target.value } : { subtext: e.target.value })} 
+                     style={{width:'100%'}} 
+                   />
+                 </div>
+               )}
+
+               {selectedLayer.content !== undefined && !selectedLayer.subtype?.includes('motion') && selectedLayer.type !== 'media' && (
+                 <div className="tool-group">
+                   <div style={{fontSize:12, marginBottom:4}}>Content</div>
+                   <textarea className="prop-input" 
+                     value={selectedLayer.content} 
+                     onChange={(e) => updateLayer(selectedLayer.id, { content: e.target.value })} 
+                     style={{width:'100%', height:60}} 
+                   />
+                 </div>
+               )}
+
                <button className="tool-btn" style={{color: '#ff4d4d', borderColor: '#ff4d4d'}} onClick={() => deleteLayer(selectedLayer.id)}><Trash2 size={16}/> Delete</button>
             </div>
           )}
@@ -442,71 +663,142 @@ const Sidebar = () => {
 // --- SCALED CANVAS ENGINE ---
 const Canvas = () => {
   const { layers, currentTime, isPlaying, updateLayer, setSelectedLayerId, selectedLayerId, trackSettings, updateClipDuration, canvasSettings } = useEditor();
-  const [draggingId, setDraggingId] = useState(null);
-  const [resizing, setResizing] = useState(null); 
+  
+  // DRAGGING STATE
+  const [interaction, setInteraction] = useState(null); // { id, startX, startY, initialLeft, initialTop, type: 'drag'|'resize' }
+  
   const containerRef = useRef(null);
   const wrapperRef = useRef(null);
   const [scale, setScale] = useState(1);
 
   // 1. Calculate Scale to fit resolution into view
   useLayoutEffect(() => {
-    const updateScale = () => {
-      if (!wrapperRef.current) return;
-      const { width: parentW, height: parentH } = wrapperRef.current.getBoundingClientRect();
-      const padding = 80; // 40px each side
-      const availW = parentW - padding;
-      const availH = parentH - padding;
-      
-      const scaleW = availW / canvasSettings.width;
-      const scaleH = availH / canvasSettings.height;
-      
-      // Use the smaller scale to fit entirely
-      const newScale = Math.min(scaleW, scaleH, 1); 
-      setScale(newScale);
-    };
+    if (!wrapperRef.current) return;
     
-    updateScale();
-    window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
-  }, [canvasSettings]);
+    // Create a ResizeObserver to monitor the wrapper's size changes
+    const resizeObserver = new ResizeObserver((entries) => {
+        for (let entry of entries) {
+            const { width: parentW, height: parentH } = entry.contentRect;
+            
+            // Calculate available space
+            // Use smaller padding to maximize space
+            const padding = 40; 
+            const availW = parentW - padding;
+            const availH = parentH - padding;
+            
+            if (availW <= 0 || availH <= 0) return;
 
-  const handleMouseDown = (e, layer) => { if(trackSettings[layer.type === 'text' ? 'text' : 'subtitle']?.locked) return; e.stopPropagation(); setDraggingId(layer.id); setSelectedLayerId(layer.id); };
+            // Calculate scale factors
+            const scaleW = availW / canvasSettings.width;
+            const scaleH = availH / canvasSettings.height;
+            
+            // Use the smaller scale to fit entirely within the available space
+            const newScale = Math.min(scaleW, scaleH); 
+            
+            setScale(newScale);
+        }
+    });
+
+    // Start observing the wrapper
+    resizeObserver.observe(wrapperRef.current);
+
+    // Cleanup observer on unmount
+    return () => {
+        resizeObserver.disconnect();
+    };
+  }, [canvasSettings]); // Re-run effect only when canvas settings change (e.g. resolution)
+
+  const handleMouseDown = (e, layer) => { 
+    if(trackSettings[layer.type === 'text' ? 'text' : 'subtitle']?.locked) return; 
+    e.stopPropagation(); 
+    
+    // Parse current % position, defaulting to center (50%)
+    const currentLeft = parseFloat(layer.style.left) || 50;
+    const currentTop = parseFloat(layer.style.top) || 50;
+
+    setInteraction({
+      type: 'drag',
+      id: layer.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      initialLeft: currentLeft,
+      initialTop: currentTop
+    });
+    
+    setSelectedLayerId(layer.id); 
+  };
   
   const handleResizeStart = (e, layer) => {
     e.stopPropagation();
     const startW = parseInt(layer.style.width || 100);
     const startH = parseInt(layer.style.height || 100);
     const startFs = parseInt(layer.style.fontSize || 24);
-    setResizing({ id: layer.id, startX: e.clientX, startY: e.clientY, startW, startH, startFs, isText: layer.type === 'text' || layer.isEmoji });
+    
+    setInteraction({ 
+        type: 'resize',
+        id: layer.id, 
+        startX: e.clientX, 
+        startY: e.clientY, 
+        startW, startH, startFs, 
+        isText: layer.type === 'text' || layer.isEmoji 
+    });
   };
 
   const handleMouseMove = (e) => {
-    if (!containerRef.current) return;
+    if (!interaction || !containerRef.current) return;
+    
+    // Get VISUAL container dimensions (this is the scaled size on screen)
     const rect = containerRef.current.getBoundingClientRect();
     
-    if (resizing) {
-        // Adjust Delta by Scale so drag speed feels 1:1 with mouse
-        const dx = (e.clientX - resizing.startX) / scale;
+    // Calculate delta in screen pixels
+    const dx = e.clientX - interaction.startX;
+    const dy = e.clientY - interaction.startY;
+
+    const layer = layers.find(l => l.id === interaction.id);
+    if (!layer) return;
+
+    if (interaction.type === 'drag') {
+        // We use Logical Pixels to ensure precision
+        // logical_delta = screen_delta / scale
+        const logicalDx = dx / scale;
+        const logicalDy = dy / scale;
         
-        const layer = layers.find(l => l.id === resizing.id);
-        if (resizing.isText) {
-             const newFs = Math.max(10, resizing.startFs + (dx / 2));
-             updateLayer(resizing.id, { style: { ...layer.style, fontSize: newFs }});
+        // Convert logical pixels to percentage of the canvas size
+        const deltaXPercent = (logicalDx / canvasSettings.width) * 100;
+        const deltaYPercent = (logicalDy / canvasSettings.height) * 100;
+
+        let newLeft = interaction.initialLeft + deltaXPercent;
+        let newTop = interaction.initialTop + deltaYPercent;
+
+        // Clamp to canvas boundaries (0% to 100%)
+        newLeft = Math.max(0, Math.min(100, newLeft));
+        newTop = Math.max(0, Math.min(100, newTop));
+
+        updateLayer(interaction.id, { 
+            style: { 
+                ...layer.style, 
+                left: `${newLeft}%`, 
+                top: `${newTop}%` 
+            } 
+        });
+    } else if (interaction.type === 'resize') {
+        // For resizing, we need to account for scale manually because we aren't using percentages for size usually (px)
+        // or if we are, we map back. Here we use PX for size based on the logic in previous snippets.
+        const scaledDx = dx / scale;
+        
+        if (interaction.isText) {
+             const newFs = Math.max(10, interaction.startFs + (scaledDx / 2));
+             updateLayer(interaction.id, { style: { ...layer.style, fontSize: newFs }});
         } else {
-             const newW = Math.max(20, resizing.startW + dx);
-             const ratio = resizing.startH / resizing.startW;
+             const newW = Math.max(20, interaction.startW + scaledDx);
+             const ratio = interaction.startH / interaction.startW;
              const newH = newW * (isNaN(ratio) ? 1 : ratio);
-             updateLayer(resizing.id, { style: { ...layer.style, width: `${newW}px`, height: `${newH}px` }});
+             updateLayer(interaction.id, { style: { ...layer.style, width: `${newW}px`, height: `${newH}px` }});
         }
-    } else if (draggingId) {
-        const layer = layers.find(l => l.id === draggingId);
-        // Note: rect.left/width from getBoundingClientRect are already scaled values.
-        // So percentage calculation logic remains valid without manual scaling!
-        updateLayer(draggingId, { style: { ...layer.style, left: `${((e.clientX - rect.left) / rect.width) * 100}%`, top: `${((e.clientY - rect.top) / rect.height) * 100}%` } });
     }
   };
 
-  const handleMouseUp = () => { setDraggingId(null); setResizing(null); };
+  const handleMouseUp = () => { setInteraction(null); };
   const isTrackVisible = (type) => { const s = trackSettings[type]; if (Object.values(trackSettings).some(t => t.solo)) return s.solo; return true; };
   const activeMedia = layers.filter(l => l.type === 'media' && currentTime >= l.start && currentTime < l.end);
   const iconMap = { 'Youtube': Youtube, 'Instagram': Instagram, 'Facebook': Facebook, 'Twitter': Twitter, 'Check': Check, 'Message': MessageCircle, 'Star': Star, 'Music': Music, 'Zap': Zap, 'Bell': Bell, 'ShoppingBag': ShoppingBag };
@@ -522,7 +814,7 @@ const Canvas = () => {
             width: canvasSettings.width, 
             height: canvasSettings.height, 
             transform: `scale(${scale})`,
-            background: canvasSettings.bgColor
+            background: canvasSettings.bgColor, // Reverted to dynamic bg color (default black)
         }}
       >
         
@@ -532,15 +824,14 @@ const Canvas = () => {
           const isSelected = selectedLayerId === layer.id;
           const IconComp = layer.iconName ? iconMap[layer.iconName] : (layer.icon ? iconMap[layer.icon] : null);
 
-          // Apply transform center to match backend
+          // SAFE STYLE COMPOSITION
+          // Ensure left/top are valid and not undefined, defaulting to center if missing
           const layerStyle = {
-              position: 'absolute',
-              left: layer.style.left,
-              top: layer.style.top,
-              transform: 'translate(-50%, -50%)',
               ...layer.style,
-              left: undefined, // remove to prevent conflict
-              top: undefined
+              position: 'absolute',
+              left: layer.style.left || '50%',
+              top: layer.style.top || '50%',
+              transform: 'translate(-50%, -50%)',
           };
 
           if (layer.subtype === 'overlay-vhs') return <div key={layer.id} className="overlay-vhs" style={{position:'absolute', inset:0, zIndex:10}}/>;
@@ -568,6 +859,7 @@ const Canvas = () => {
               {layer.subtype === 'clay-button' && <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', fontWeight:'bold', letterSpacing:'1px', textTransform:'uppercase'}}>{layer.text}</div>}
               {layer.subtype === 'clay-glass' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}></div>}
               {layer.subtype === 'clay-frame-phone' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}><div style={{width:'90%', height:'95%', background:'black', borderRadius:20}}></div></div>}
+              {layer.subtype === 'clay-frame' && <div style={{width:'100%', height:'100%'}}></div>}
 
               {layer.subtype === 'widget-stopwatch' && (<div style={{fontFamily:'monospace', display:'flex', alignItems:'center', justifyContent:'center', height:'100%', width:'100%'}}>{formatStopwatch(currentTime - layer.start)}</div>)}
               {layer.subtype === 'widget-qr' && <img src={layer.src} alt="qr" style={{width:'100%', height:'100%'}} />}
