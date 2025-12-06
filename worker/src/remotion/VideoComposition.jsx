@@ -1,21 +1,20 @@
 import React from 'react';
-import { AbsoluteFill, Sequence, Video, Img, useVideoConfig, useCurrentFrame } from 'remotion';
-import {
-  Play, Pause, Type, Video as VideoIcon, Music, Scissors,
-  Wand2, Download, ChevronLeft, Layers,
-  Settings, Plus, Image as ImageIcon, Sparkles,
-  MonitorPlay, Mic, Subtitles, Trash2, X,
-  UploadCloud, Move, ChevronRight, AlignLeft,
-  Youtube, Instagram, Facebook, Twitter, Heart, ThumbsUp, Bell,
-  Sticker, Clock, QrCode, Film, Zap, Aperture, Triangle, Star, Hexagon,
-  Ghost, Loader2, Lock, Unlock, Eye, EyeOff, Volume2, VolumeX, Magnet, Split,
+import { AbsoluteFill, Sequence, OffthreadVideo, Img, useVideoConfig, useCurrentFrame } from 'remotion';
+import { 
+  Play, Pause, Type, Video, Music, Scissors, Wand2, Download, ChevronLeft, Layers, 
+  Settings, Plus, Image as ImageIcon, Sparkles, MonitorPlay, Mic, Subtitles, Trash2, X,
+  UploadCloud, Move, ChevronRight, AlignLeft, Youtube, Instagram, Facebook, Twitter, 
+  Heart, ThumbsUp, Bell, Sticker, Clock, QrCode, Film, Zap, Aperture, Triangle, Star, 
+  Hexagon, Ghost, Loader2, Lock, Unlock, Eye, EyeOff, Volume2, VolumeX, Magnet, Split,
   LayoutTemplate, Gamepad2, Tv, User, Check, MessageCircle, Share2, Battery,
   Smartphone, Monitor, Menu, Cpu, Terminal, FileVideo, AlertTriangle,
   ShoppingBag, Tag, Percent, ArrowRight
 } from 'lucide-react';
 
-// --- STYLES & ANIMATIONS (Ported from client/src/App.jsx) ---
 const styles = `
+  /* IMPORT FONTS */
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+
   :root {
     --bg-dark: #101010;
     --bg-panel: #181818;
@@ -27,16 +26,17 @@ const styles = `
     --text-muted: #a0a0a0;
     --timeline-bg: #0f0f0f;
     --playhead: #ff4d4d;
+    
+    /* Font Fix */
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
 
     /* CLAYMORPHISM VARS */
-    --clay-shadow:
-      6px 6px 12px rgba(0, 0, 0, 0.4),
-      -4px -4px 10px rgba(255, 255, 255, 0.1),
-      inset 2px 2px 5px rgba(255, 255, 255, 0.3),
+    --clay-shadow: 
+      6px 6px 12px rgba(0, 0, 0, 0.4), 
+      -4px -4px 10px rgba(255, 255, 255, 0.1), 
+      inset 2px 2px 5px rgba(255, 255, 255, 0.3), 
       inset -2px -2px 5px rgba(0, 0, 0, 0.2);
   }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 
   /* ANIMATIONS */
   @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -53,10 +53,17 @@ const styles = `
   .animate-spin { animation: spin 1s linear infinite; }
 
   /* OVERLAYS */
-  .overlay-vhs { background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 2px, 3px 100%; pointer-events: none; mix-blend-mode: overlay; }
+  .overlay-vhs { 
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); 
+    background-size: 100% 2px, 3px 100%; 
+    pointer-events: none; 
+    mix-blend-mode: overlay;
+    width: 100%; 
+    height: 100%;
+  }
 `;
 
-// --- UTILS & HELPERS ---
 const getClayStyle = (bg = '#333', color = '#fff', radius = '16px') => ({
     background: bg, color: color, borderRadius: radius,
     boxShadow: 'var(--clay-shadow)',
@@ -64,131 +71,103 @@ const getClayStyle = (bg = '#333', color = '#fff', radius = '16px') => ({
     backdropFilter: 'blur(5px)',
 });
 
-const iconMap = { 'Youtube': Youtube, 'Instagram': Instagram, 'Facebook': Facebook, 'Twitter': Twitter, 'Check': Check, 'Message': MessageCircle, 'Star': Star, 'Music': Music, 'Zap': Zap, 'Bell': Bell, 'ShoppingBag': ShoppingBag };
+const iconMap = { 
+  'Youtube': Youtube, 'Instagram': Instagram, 'Facebook': Facebook, 'Twitter': Twitter, 
+  'Check': Check, 'Message': MessageCircle, 'Star': Star, 'Music': Music, 
+  'Zap': Zap, 'Bell': Bell, 'ShoppingBag': ShoppingBag 
+};
 
-// Helper component for Stopwatch to use hooks safely
 const Stopwatch = ({ startFrame }) => {
     const frame = useCurrentFrame();
     const { fps } = useVideoConfig();
-
-    // Calculate time elapsed since the start of the layer
-    // Remotion's Sequence resets frame to 0 relative to sequence start?
-    // Actually, useCurrentFrame() inside a Sequence returns frame relative to the Sequence.
-    // So if Sequence starts at frame 100, frame 0 inside = frame 100 absolute.
     const timeInSeconds = frame / fps;
-
-    const totalSeconds = Math.floor(timeInSeconds);
-    const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
-    const secs = (totalSeconds % 60).toString().padStart(2, '0');
+    const mins = Math.floor(timeInSeconds / 60).toString().padStart(2, '0');
+    const secs = (Math.floor(timeInSeconds) % 60).toString().padStart(2, '0');
     const millis = Math.floor((timeInSeconds % 1) * 100).toString().padStart(2, '0');
-
     return <>{`${mins}:${secs}.${millis}`}</>;
 };
 
 export const VideoComposition = ({ layers }) => {
   const { fps } = useVideoConfig();
 
-  if (!layers || layers.length === 0) {
-    return <AbsoluteFill style={{ backgroundColor: 'black' }} />;
-  }
+  if (!layers) return null;
 
   return (
-    <AbsoluteFill style={{ backgroundColor: 'black' }}>
+    <AbsoluteFill style={{ backgroundColor: 'black', fontFamily: "'Inter', sans-serif" }}>
       <style>{styles}</style>
       {layers.map((layer) => {
-        // 1. CONVERT SECONDS TO FRAMES
-        const startFrame = Math.round((layer.start || 0) * fps);
-        const endFrame = Math.round((layer.end || 0) * fps);
+        const startFrame = Math.round(layer.start * fps);
+        const endFrame = Math.round(layer.end * fps);
         const durationInFrames = endFrame - startFrame;
 
         if (durationInFrames <= 0) return null;
 
         const IconComp = layer.iconName ? iconMap[layer.iconName] : (layer.icon ? iconMap[layer.icon] : null);
 
-        // NOTE: We use absolute positioning relative to the frame, just like the Canvas.
-        // But since we are inside a Sequence, we need to ensure the Sequence covers the screen
-        // or we position elements inside the Sequence.
-        // Sequence by default wraps children in absolute positioned div.
+        // --- CSS POSITIONING ---
+        // This wrapper ensures elements are centered on their coordinates
+        // matching the transform: translate(-50%, -50%) logic from frontend.
+        const wrapperStyle = {
+            position: 'absolute',
+            transform: 'translate(-50%, -50%)', 
+            ...layer.style, 
+        };
+
+        // SPECIAL CASE: VHS Overlay must be fullscreen, NOT centered/sized like elements
+        if (layer.subtype === 'overlay-vhs') {
+             return (
+                <Sequence key={layer.id} from={startFrame} durationInFrames={durationInFrames}>
+                    <AbsoluteFill>
+                        <div className="overlay-vhs" style={{width: '100%', height: '100%'}}/>
+                    </AbsoluteFill>
+                </Sequence>
+             );
+        }
 
         return (
           <Sequence key={layer.id} from={startFrame} durationInFrames={durationInFrames}>
-            {/*
-               IMPORTANT: We must replicate the Canvas container logic.
-               In client, Canvas is a flex container centering content, but elements are absolute.
-               So here we use AbsoluteFill to represent the canvas area.
-            */}
-            <AbsoluteFill>
-                {/* MEDIA HANDLING (Video/Image) */}
-                {layer.type === 'media' && (
-                    <>
-                        {layer.subtype === 'video' && (
-                            <Video
-                                src={layer.src}
-                                startFrom={Math.round((layer.trimStart || 0) * fps)}
-                                style={{ width: '100%', height: '100%', objectFit: 'contain', position: 'absolute', top: 0, left: 0, ...layer.style, left: 0, top: 0 }}
-                                muted={layer.muted}
-                            />
-                        )}
-                        {layer.subtype === 'image' && (
-                             <Img src={layer.src} style={{ width: '100%', height: '100%', objectFit: 'contain', position: 'absolute', top: 0, left: 0, ...layer.style, left: 0, top: 0 }} />
-                        )}
-                    </>
-                )}
+            {layer.type === 'media' ? (
+                <AbsoluteFill>
+                    {layer.subtype === 'video' ? (
+                        <OffthreadVideo src={layer.src} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    ) : (
+                        <Img src={layer.src} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    )}
+                </AbsoluteFill>
+            ) : (
+            <div style={wrapperStyle}>
+                {layer.subtype === 'motion-lower-third' && <div style={{width:'100%', height:'100%', position:'relative'}}><div className="motion-lower-third-bar" style={{height:'100%', background:'rgba(0,0,0,0.8)', borderLeft:'4px solid var(--accent)', display:'flex', flexDirection:'column', justifyContent:'center', padding:'0 20px', overflow:'hidden'}}><div className="motion-text-reveal" style={{fontSize:'24px', fontWeight:'bold', color:'white', whiteSpace:'nowrap'}}>{layer.primaryText}</div><div className="motion-text-reveal" style={{fontSize:'16px', color:'var(--accent)', animationDelay:'0.5s', whiteSpace:'nowrap'}}>{layer.secondaryText}</div></div></div>}
+                {layer.subtype === 'motion-lower-third-corp' && <div style={{width:'100%', height:'100%', position:'relative'}}><div className="motion-enter-slide-left" style={{height:'100%', background:'white', display:'flex', alignItems:'center', padding:'0 20px', borderBottom:'4px solid var(--accent)', color:'black'}}><div style={{fontWeight:'bold', fontSize:'24px', marginRight:'10px'}}>{layer.primaryText}</div><div style={{width:1, height:20, background:'#ccc', marginRight:'10px'}}></div><div style={{color:'#666'}}>{layer.secondaryText}</div></div></div>}
+                {layer.subtype === 'motion-lower-third-neon' && <div style={{width:'100%', height:'100%', position:'relative'}}><div className="motion-enter-slide-left" style={{height:'100%', background:'linear-gradient(90deg, #7d55ff 0%, #000 100%)', display:'flex', alignItems:'center', padding:'0 20px', clipPath:'polygon(0 0, 90% 0, 100% 100%, 0 100%)'}}><Gamepad2 size={32} color="white" style={{marginRight:10}}/><div><div style={{fontSize:'24px', fontWeight:'900', color:'white', textTransform:'uppercase', fontStyle:'italic', whiteSpace:'nowrap'}}>{layer.primaryText}</div><div style={{fontSize:'12px', color:'white', opacity:0.8, whiteSpace:'nowrap'}}>{layer.secondaryText}</div></div></div></div>}
+                {layer.subtype === 'motion-tweet' && <div style={{width:'100%', height:'100%', background:'white', color:'black', padding:20, borderRadius:12, fontFamily:'sans-serif'}}><div style={{display:'flex', alignItems:'center', gap:10, marginBottom:10}}><div style={{width:40, height:40, background:'#1DA1F2', borderRadius:'50%'}}></div><div><div style={{fontWeight:'bold'}}>{layer.primaryText}</div><div style={{color:'#666', fontSize:12}}>@username</div></div><Twitter fill="#1DA1F2" color="#1DA1F2" style={{marginLeft:'auto'}}/></div><div style={{fontSize:16}}>{layer.secondaryText}</div></div>}
+                {layer.subtype === 'motion-health-bar' && <div style={{width:'100%', height:'100%', border: '2px solid #444', background:'#222', padding:4, borderRadius:4}}><div className="motion-health-anim" style={{height:'100%', background:'linear-gradient(90deg, #ff4d4d, #ff9e4d)', borderRadius:2}}></div></div>}
 
-                {/* TEXT & ELEMENTS */}
-                {(layer.type === 'text' || layer.type === 'element' || layer.type === 'subtitle') && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            left: layer.style.left,
-                            top: layer.style.top,
-                            transform: 'translate(-50%, -50%)',
-                            ...layer.style,
-                            // CRITICAL FIX: Do NOT override left/top with undefined like the old worker code did.
-                            // The client style includes left/top.
-                        }}
-                    >
-                        {/* CLASSIC RENDERERS */}
-                        {layer.subtype === 'motion-lower-third' && <div style={{width:'100%', height:'100%', position:'relative'}}><div className="motion-lower-third-bar" style={{height:'100%', background:'rgba(0,0,0,0.8)', borderLeft:'4px solid var(--accent)', display:'flex', flexDirection:'column', justifyContent:'center', padding:'0 20px', overflow:'hidden'}}><div className="motion-text-reveal" style={{fontSize:'24px', fontWeight:'bold', color:'white', whiteSpace:'nowrap'}}>{layer.primaryText}</div><div className="motion-text-reveal" style={{fontSize:'16px', color:'var(--accent)', animationDelay:'0.5s', whiteSpace:'nowrap'}}>{layer.secondaryText}</div></div></div>}
-                        {layer.subtype === 'motion-lower-third-corp' && <div style={{width:'100%', height:'100%', position:'relative'}}><div className="motion-enter-slide-left" style={{height:'100%', background:'white', display:'flex', alignItems:'center', padding:'0 20px', borderBottom:'4px solid var(--accent)', color:'black'}}><div style={{fontWeight:'bold', fontSize:'24px', marginRight:'10px'}}>{layer.primaryText}</div><div style={{width:1, height:20, background:'#ccc', marginRight:'10px'}}></div><div style={{color:'#666'}}>{layer.secondaryText}</div></div></div>}
-                        {layer.subtype === 'motion-lower-third-neon' && <div style={{width:'100%', height:'100%', position:'relative'}}><div className="motion-enter-slide-left" style={{height:'100%', background:'linear-gradient(90deg, #7d55ff 0%, #000 100%)', display:'flex', alignItems:'center', padding:'0 20px', clipPath:'polygon(0 0, 90% 0, 100% 100%, 0 100%)'}}><Gamepad2 size={32} color="white" style={{marginRight:10}}/><div><div style={{fontSize:'24px', fontWeight:'900', color:'white', textTransform:'uppercase', fontStyle:'italic', whiteSpace:'nowrap'}}>{layer.primaryText}</div><div style={{fontSize:'12px', color:'white', opacity:0.8, whiteSpace:'nowrap'}}>{layer.secondaryText}</div></div></div></div>}
-                        {layer.subtype === 'motion-tweet' && <div style={{width:'100%', height:'100%', background:'white', color:'black', padding:20, borderRadius:12, fontFamily:'sans-serif'}}><div style={{display:'flex', alignItems:'center', gap:10, marginBottom:10}}><div style={{width:40, height:40, background:'#1DA1F2', borderRadius:'50%'}}></div><div><div style={{fontWeight:'bold'}}>{layer.primaryText}</div><div style={{color:'#666', fontSize:12}}>@username</div></div><Twitter fill="#1DA1F2" color="#1DA1F2" style={{marginLeft:'auto'}}/></div><div style={{fontSize:16}}>{layer.secondaryText}</div></div>}
-                        {layer.subtype === 'motion-health-bar' && <div style={{width:'100%', height:'100%', border: '2px solid #444', background:'#222', padding:4, borderRadius:4}}><div className="motion-health-anim" style={{height:'100%', background:'linear-gradient(90deg, #ff4d4d, #ff9e4d)', borderRadius:2}}></div></div>}
+                {layer.subtype === 'clay-pill' && <div style={{display:'flex', alignItems:'center', gap:15, padding:'0 20px', height:'100%', width:'100%'}}>{IconComp && <IconComp size={32} color={layer.style.color === '#fff' ? layer.iconColor || 'red' : 'white'} />}<span style={{fontWeight:'bold', fontSize:'1.2em'}}>{layer.text}</span></div>}
+                {layer.subtype === 'clay-bubble' && <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:10, height:'100%', width:'100%'}}>{IconComp && <IconComp size={24}/>}<span>{layer.text}</span></div>}
+                {layer.subtype === 'clay-card' && <div style={{padding:20, display:'flex', flexDirection:'column', gap:10, height:'100%'}}><div style={{display:'flex', alignItems:'center', gap:10, opacity:0.8}}>{IconComp && <IconComp size={20}/>}<span style={{fontSize:'0.8em'}}>Social Update</span></div><div style={{fontSize:'1.1em', fontWeight:'600'}}>{layer.text}</div></div>}
+                {layer.subtype === 'clay-blob' && <div style={{display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', height:'100%', width:'100%'}}><div style={{fontWeight:'900', fontSize:'1.5em', letterSpacing:'1px'}}>{layer.text}</div><div style={{fontSize:'0.9em', opacity:0.9}}>{layer.subtext}</div></div>}
+                {layer.subtype === 'clay-pill-split' && <div style={{display:'flex', height:'100%', width:'100%', overflow:'hidden', borderRadius: layer.style.borderRadius}}><div style={{width:'30%', background:'rgba(0,0,0,0.2)', display:'flex', alignItems:'center', justifyContent:'center'}}><User size={24}/></div><div style={{flex:1, display:'flex', flexDirection:'column', justifyContent:'center', paddingLeft:15}}><div style={{fontWeight:'bold'}}>{layer.text}</div><div style={{fontSize:'0.8em', opacity:0.7}}>{layer.subtext}</div></div></div>}
 
-                        {layer.subtype === 'overlay-vhs' && <div className="overlay-vhs" style={{width:'100%', height:'100%'}}/>}
+                {layer.subtype === 'clay-bar' && <div style={{width:'100%', height:'100%', padding:4, boxSizing:'border-box'}}><div style={{width: `${layer.val}%`, height:'100%', background: layer.color || 'white', borderRadius: layer.style.borderRadius, boxShadow:'inset 2px 2px 5px rgba(255,255,255,0.4), inset -2px -2px 5px rgba(0,0,0,0.2)'}}></div></div>}
+                {layer.subtype === 'clay-circle-text' && <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', width:'100%', fontWeight:'bold', fontSize:'1.5em'}}>{layer.text}</div>}
+                {layer.subtype === 'clay-toast' && <div style={{display:'flex', alignItems:'center', gap:15, padding:'0 20px', height:'100%'}}><div style={{background:'rgba(255,255,255,0.2)', padding:5, borderRadius:'50%'}}>{IconComp && <IconComp size={16}/>}</div><span style={{fontWeight:'600'}}>{layer.text}</span></div>}
+                {layer.subtype === 'clay-tag' && <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', fontWeight:'900'}}>{layer.text}</div>}
+                {layer.subtype === 'clay-button' && <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', fontWeight:'bold', letterSpacing:'1px', textTransform:'uppercase'}}>{layer.text}</div>}
+                {layer.subtype === 'clay-glass' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}></div>}
+                {layer.subtype === 'clay-frame-phone' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}><div style={{width:'90%', height:'95%', background:'black', borderRadius:20}}></div></div>}
+                {layer.subtype === 'clay-shape' && <div style={{width:'100%', height:'100%'}}></div>}
+                {layer.subtype === 'clay-emoji' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}>{layer.content}</div>}
+                {layer.subtype === 'clay-spinner' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}><Loader2 className="animate-spin" size={40} color={layer.style.color}/></div>}
+                {layer.subtype === 'clay-icon-float' && IconComp && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}><IconComp size={40} color={layer.style.color === '#fff' ? 'white' : 'white'}/></div>}
 
-                        {/* CLAY TEMPLATE RENDERERS */}
-                        {layer.subtype === 'clay-pill' && ( <div style={{display:'flex', alignItems:'center', gap:15, padding:'0 20px', height:'100%', width:'100%'}}> {IconComp && <IconComp size={32} color={layer.style.color === '#fff' ? layer.iconColor || 'red' : 'white'} />} <span style={{fontWeight:'bold', fontSize:'1.2em'}}>{layer.text}</span> </div> )}
-                        {layer.subtype === 'clay-bubble' && ( <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:10, height:'100%', width:'100%'}}> {IconComp && <IconComp size={24}/>} <span>{layer.text}</span> </div> )}
-                        {layer.subtype === 'clay-card' && ( <div style={{padding:20, display:'flex', flexDirection:'column', gap:10, height:'100%'}}> <div style={{display:'flex', alignItems:'center', gap:10, opacity:0.8}}>{IconComp && <IconComp size={20}/>} <span style={{fontSize:'0.8em'}}>Social Update</span></div> <div style={{fontSize:'1.1em', fontWeight:'600'}}>{layer.text}</div> </div> )}
-                        {layer.subtype === 'clay-blob' && ( <div style={{display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', height:'100%', width:'100%'}}> <div style={{fontWeight:'900', fontSize:'1.5em', letterSpacing:'1px'}}>{layer.text}</div> <div style={{fontSize:'0.9em', opacity:0.9}}>{layer.subtext}</div> </div> )}
-                        {layer.subtype === 'clay-pill-split' && ( <div style={{display:'flex', height:'100%', width:'100%', overflow:'hidden', borderRadius: layer.style.borderRadius}}> <div style={{width:'30%', background:'rgba(0,0,0,0.2)', display:'flex', alignItems:'center', justifyContent:'center'}}><User size={24}/></div> <div style={{flex:1, display:'flex', flexDirection:'column', justifyContent:'center', paddingLeft:15}}> <div style={{fontWeight:'bold'}}>{layer.text}</div> <div style={{fontSize:'0.8em', opacity:0.7}}>{layer.subtext}</div> </div> </div> )}
+                {layer.subtype === 'widget-stopwatch' && <div style={{fontFamily:'monospace', display:'flex', alignItems:'center', justifyContent:'center', height:'100%', width:'100%'}}><Stopwatch startFrame={startFrame} /></div>}
+                {layer.subtype === 'widget-qr' && <img src={layer.src} alt="qr" style={{width:'100%', height:'100%'}} />}
+                {layer.subtype === 'icon' && IconComp && <IconComp style={{width:'100%', height:'100%', color: layer.style.color}} />}
 
-                        {/* RESTORED WIDGETS */}
-                        {layer.subtype === 'clay-bar' && ( <div style={{width:'100%', height:'100%', padding:4, boxSizing:'border-box'}}> <div style={{width: `${layer.val}%`, height:'100%', background: layer.color || 'white', borderRadius: layer.style.borderRadius, boxShadow:'inset 2px 2px 5px rgba(255,255,255,0.4), inset -2px -2px 5px rgba(0,0,0,0.2)'}}></div> </div> )}
-                        {layer.subtype === 'clay-circle-text' && ( <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', width:'100%', fontWeight:'bold', fontSize:'1.5em'}}>{layer.text}</div> )}
-                        {layer.subtype === 'clay-toast' && ( <div style={{display:'flex', alignItems:'center', gap:15, padding:'0 20px', height:'100%'}}> <div style={{background:'rgba(255,255,255,0.2)', padding:5, borderRadius:'50%'}}>{IconComp && <IconComp size={16}/>}</div> <span style={{fontWeight:'600'}}>{layer.text}</span> </div> )}
-                        {layer.subtype === 'clay-tag' && <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', fontWeight:'900'}}>{layer.text}</div>}
-                        {layer.subtype === 'clay-button' && <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', fontWeight:'bold', letterSpacing:'1px', textTransform:'uppercase'}}>{layer.text}</div>}
-                        {layer.subtype === 'clay-glass' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}></div>}
-                        {layer.subtype === 'clay-frame-phone' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}><div style={{width:'90%', height:'95%', background:'black', borderRadius:20}}></div></div>}
-
-                        {layer.subtype === 'widget-stopwatch' && (<div style={{fontFamily:'monospace', display:'flex', alignItems:'center', justifyContent:'center', height:'100%', width:'100%'}}><Stopwatch /></div>)}
-                        {layer.subtype === 'widget-qr' && <img src={layer.src} alt="qr" style={{width:'100%', height:'100%'}} />}
-                        {layer.subtype === 'icon' && IconComp && <IconComp style={{width:'100%', height:'100%', color: layer.style.color}} />}
-
-                        {/* CLAY ELEMENT RENDERERS */}
-                        {layer.subtype === 'clay-shape' && <div style={{width:'100%', height:'100%'}}></div>}
-                        {layer.subtype === 'clay-emoji' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}>{layer.content}</div>}
-                        {layer.subtype === 'clay-spinner' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}><Loader2 className="animate-spin" size={40} color={layer.style.color}/></div>}
-                        {layer.subtype === 'clay-icon-float' && IconComp && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}><IconComp size={40} color={layer.style.color === '#fff' ? 'white' : 'white'}/></div>}
-
-                        {/* Standard Fallbacks */}
-                        {layer.type === 'text' && (layer.content || layer.text)}
-
-                    </div>
-                )}
-            </AbsoluteFill>
+                {layer.type === 'text' && (layer.content || layer.text)}
+                {layer.subtype === 'image' && <Img src={layer.src} alt="el" style={{width:'100%', height:'100%', objectFit:'contain', borderRadius: layer.style.borderRadius}} />}
+            </div>
+            )}
           </Sequence>
         );
       })}

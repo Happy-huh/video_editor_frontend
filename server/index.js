@@ -1,4 +1,5 @@
 const express = require('express');
+require('dotenv').config();
 const cors = require('cors');
 const { Queue, Job } = require('bullmq');
 const IORedis = require('ioredis');
@@ -20,6 +21,7 @@ const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379'
 const renderQueue = new Queue('render-queue', { connection });
 
 // Setup Google Cloud Storage
+console.log(process.env.GOOGLE_APPLICATION_CREDENTIALS);
 const storage = new Storage();
 const bucketName = process.env.GCP_BUCKET_NAME || 'onera-assets'; // Default fallback or error
 
