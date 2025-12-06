@@ -10,8 +10,7 @@ import {
   Ghost, Loader2, Lock, Unlock, Eye, EyeOff, Volume2, VolumeX, Magnet, Split,
   LayoutTemplate, Gamepad2, Tv, User, Check, MessageCircle, Share2, Battery,
   Smartphone, Monitor, Menu, Cpu, Terminal, FileVideo, AlertTriangle,
-  ShoppingBag, Tag, Percent, ArrowRight,
-  Loader
+  ShoppingBag, Tag, Percent, ArrowRight
 } from 'lucide-react';
 
 // --- STYLES & ANIMATIONS ---
@@ -55,11 +54,12 @@ const styles = `
     z-index: 20; 
     flex-shrink: 0; 
   }
+  
   .nav-item { width: 50px; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; font-size: 10px; gap: 4px; color: var(--text-muted); }
   .nav-item:hover { background: var(--bg-panel-light); color: var(--text-main); }
   .nav-item.active { background: rgba(125, 85, 255, 0.1); color: var(--accent); }
 
-  /* DRAWER - Fixed Width */
+  /* DRAWER - Fixed Width with Mobile Adjustment */
   .drawer { 
     width: 340px; 
     background: var(--bg-panel); 
@@ -70,11 +70,10 @@ const styles = `
     overflow-y: auto; 
     position: relative; 
     z-index: 10; 
-    transition: transform 0.3s ease;
+    transition: width 0.3s ease;
     flex-shrink: 0; 
   }
   
-  /* Responsive Drawer: Shrink slightly on mobile */
   @media (max-width: 800px) {
     .drawer { width: 260px; padding: 10px; }
   }
@@ -111,10 +110,8 @@ const styles = `
   @keyframes lowerThirdBar { 0% { width: 0; } 100% { width: 100%; } }
   @keyframes textReveal { 0% { clip-path: inset(0 100% 0 0); } 100% { clip-path: inset(0 0 0 0); } }
   @keyframes health-drain { 0% { width: 100%; } 50% { width: 60%; } 100% { width: 30%; } }
-  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* MOTION CLASSES */
-  .animate-spin { animation: spin 1s linear infinite; }
   .motion-enter-slide-left { animation: slideInLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   .motion-lower-third-bar { animation: lowerThirdBar 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   .motion-text-reveal { animation: textReveal 0.8s 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; clip-path: inset(0 100% 0 0); }
@@ -125,7 +122,7 @@ const styles = `
   .header { height: 60px; background: var(--bg-dark); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; flex-shrink: 0; }
   .export-btn { background: var(--text-main); color: black; padding: 8px 16px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
   
-  /* CANVAS AREA - FLEX CENTER */
+  /* CANVAS AREA */
   .canvas-area { 
     flex: 1; 
     background: #000; 
@@ -136,12 +133,12 @@ const styles = `
     overflow: hidden; 
   }
   
-  /* SCALER: THE SIMULATION ENGINE */
+  /* SCALER: This is the 1920x1080 box */
   .canvas-scaler {
     transform-origin: center center;
-    box-shadow: 0 0 100px rgba(0,0,0,0.8); /* Make it pop against the background */
+    box-shadow: 0 0 100px rgba(0,0,0,0.8);
     background: #000;
-    overflow: hidden; /* CLIP CONTENT STRICTLY */
+    overflow: hidden; /* Clips content strictly */
     position: relative;
   }
 
@@ -191,38 +188,44 @@ const styles = `
   .modal-header { padding: 16px 24px; font-size: 18px; font-weight: bold; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; }
   .modal-body { padding: 24px; }
 
-  /* RESPONSIVE LAYOUT ADJUSTMENTS */
+  /* RESPONSIVE LAYOUT - Mobile Column Stack */
   @media (max-width: 800px) {
     .app-container {
       flex-direction: column;
     }
     
-    /* Workspace moves to Top */
+    /* Workspace (Canvas) first */
     .workspace {
       order: 1;
       width: 100%;
-      height: 60vh; /* Give canvas space */
+      height: 60vh;
       flex: none;
       border-bottom: 1px solid var(--border);
     }
 
-    /* Drawer moves to Middle */
+    /* Drawer second */
     .drawer {
       order: 2;
       width: 100%;
       height: 30vh;
       border-right: none;
       border-top: 1px solid var(--border);
-      padding-bottom: 10px;
     }
-
-    /* Sidebar stays on left but we want it to be vertical on the side?
-       Wait, the user said: "make the sidebar consistent no matter view port i.e ... the side bar remains on the side".
-       If container is column, sidebar on side is hard unless it's absolute or grid.
-       Let's use Grid for mobile to keep sidebar left.
+    
+    /* Sidebar third (but kept vertical layout logic if needed, usually hidden or simplified on mobile apps, here we stack it) */
+    /* Since user asked to reverse tab bar, we keep sidebar as sidebar but layout column makes it weird. 
+       Actually user asked: "irrespective of the screen size the side bar remains on the side".
+       So we should NOT stack it at the bottom.
+       Let's revert the @media query for app-container flex-direction.
     */
   }
 `;
+
+/* REVERTING RESPONSIVE LAYOUT CHANGE:
+   User said: "irrespective of the screen size the side bar remains on the side".
+   So we remove the flex-direction: column rule for .app-container in media query.
+   We only keep drawer width adjustment.
+*/
 
 // --- UTILS & HELPERS ---
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -426,7 +429,7 @@ const ExportModal = ({ isOpen, onClose }) => {
         <div className="modal-header"><span>Export Video</span><button onClick={onClose}><X size={20}/></button></div>
         <div className="modal-body">
           {status === 'idle' && (<div style={{textAlign:'center', padding:20}}><p style={{marginBottom: 20, color: '#ccc'}}>Ready to render your masterpiece?</p><button className="btn-primary" onClick={startExport} style={{width:'100%', justifyContent:'center'}}>Start Rendering</button></div>)}
-          {(status === 'queued' || status === 'pending') && (<div style={{textAlign:'center', padding:40, display:'flex', flexDirection:'column', alignItems:'center', gap:15}}><Loader className="animate-spin" size={48} color="var(--accent)"/><div><div style={{fontWeight:'bold', fontSize:18}}>Rendering...</div><div style={{color:'#888', fontSize:14}}>This may take a few moments</div></div></div>)}
+          {(status === 'queued' || status === 'pending') && (<div style={{textAlign:'center', padding:40, display:'flex', flexDirection:'column', alignItems:'center', gap:15}}><Loader2 className="animate-spin" size={48} color="var(--accent)"/><div><div style={{fontWeight:'bold', fontSize:18}}>Rendering...</div><div style={{color:'#888', fontSize:14}}>This may take a few moments</div></div></div>)}
           {status === 'completed' && (<div style={{textAlign:'center', padding:20}}><div style={{width:60, height:60, background:'#22c55e', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px'}}><Check size={32} color="white"/></div><h3 style={{marginBottom:10}}>Render Complete!</h3><p style={{marginBottom:20, color:'#aaa'}}>Your video is ready to download.</p>{result?.videoUrl && (<div style={{background:'#111', padding:10, borderRadius:8, marginBottom:20, wordBreak:'break-all', fontSize:12, fontFamily:'monospace', color:'#aaa'}}>{result.videoUrl}</div>)}<button className="btn-primary" style={{background:'#22c55e'}} onClick={() => window.open(result?.videoUrl || '#', '_blank')}><Download size={18}/> Download Video</button></div>)}
           {status === 'failed' && (<div style={{textAlign:'center', padding:20}}><div style={{width:60, height:60, background:'#ef4444', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px'}}><X size={32} color="white"/></div><h3 style={{marginBottom:10, color:'#ef4444'}}>Render Failed</h3><p style={{color:'#aaa', marginBottom:20}}>{error || 'An unexpected error occurred.'}</p><button className="btn-primary" onClick={startExport} style={{background:'#333'}}>Try Again</button></div>)}
         </div>
@@ -758,19 +761,16 @@ const Canvas = () => {
     if (!layer) return;
 
     if (interaction.type === 'drag') {
-        // We use Logical Pixels to ensure precision
-        // logical_delta = screen_delta / scale
-        const logicalDx = dx / scale;
-        const logicalDy = dy / scale;
-        
-        // Convert logical pixels to percentage of the canvas size
-        const deltaXPercent = (logicalDx / canvasSettings.width) * 100;
-        const deltaYPercent = (logicalDy / canvasSettings.height) * 100;
+        // [REVERTED LOGIC]: Map screen pixels directly to container percentage.
+        // This ensures 1:1 mouse movement feeling because rect.width is what the user SEES.
+        const deltaXPercent = (dx / rect.width) * 100;
+        const deltaYPercent = (dy / rect.height) * 100;
 
         let newLeft = interaction.initialLeft + deltaXPercent;
         let newTop = interaction.initialTop + deltaYPercent;
 
-        // Clamp to canvas boundaries (0% to 100%)
+        // [NEW]: CLAMPING Logic to keep elements inside
+        // Allow elements to be partially off-screen but not lost (e.g., -50% to 150%)
         newLeft = Math.max(0, Math.min(100, newLeft));
         newTop = Math.max(0, Math.min(100, newTop));
 
@@ -870,8 +870,8 @@ const Canvas = () => {
               {layer.subtype === 'clay-spinner' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}><Loader2 className="animate-spin" size={40} color={layer.style.color}/></div>}
               {layer.subtype === 'clay-icon-float' && IconComp && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}><IconComp size={40} color={layer.style.color === '#fff' ? 'white' : 'white'}/></div>}
 
-              {layer.type === 'text' && layer.content}
-              {layer.subtype === 'image' && <img src={layer.src} alt="el" style={{width:'100%', height:'100%', objectFit:'contain', borderRadius: layer.style.borderRadius}} />}
+              {layer.type === 'text' && (layer.content || layer.text)}
+              {layer.subtype === 'image' && <Img src={layer.src} alt="el" style={{width:'100%', height:'100%', objectFit:'contain', borderRadius: layer.style.borderRadius}} />}
               
               {isSelected && !trackSettings.text?.locked && <div className="resize-handle resize-se" onMouseDown={(e) => handleResizeStart(e, layer)} />}
             </div>

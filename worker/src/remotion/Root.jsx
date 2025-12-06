@@ -13,12 +13,17 @@ export const RemotionRoot = () => {
         width={1920}
         height={1080}
         defaultProps={{ layers: [] }}
+        // --- CHANGE START ---
         calculateMetadata={async ({ props }) => {
             return {
                 durationInFrames: props.durationInFrames || 300,
+                // Dynamically override width/height from the job data
+                width: props.canvasSettings?.width || 1920,
+                height: props.canvasSettings?.height || 1080,
                 props
             }
         }}
+        // --- CHANGE END ---
       />
     </>
   );

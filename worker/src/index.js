@@ -37,15 +37,21 @@ const worker = new Worker('render-queue', async (job) => {
         console.log(`Max End Time: ${maxDurationSeconds}s`);
         console.log(`Target Duration: ${durationInFrames} frames`);
 
-        // 3. Select & Render
+        // --- CHANGE START ---
+        // 3. Prepare Props
+        const inputProps = {
+            layers: job.data.layers,
+            durationInFrames: durationInFrames,
+            // Pass the canvas settings to Remotion, defaulting to 1080p if missing
+            canvasSettings: job.data.canvasSettings || { width: 1920, height: 1080 }
+        };
+
+        // 4. Select & Render
         const compositionId = 'MainSequence';
         const composition = await selectComposition({
             serveUrl: bundleLocation,
             id: compositionId,
-            inputProps: {
-                layers: job.data.layers,
-                durationInFrames: durationInFrames 
-            },
+            inputProps, // Use the prepared props
         });
 
         const outputLocation = path.join(os.tmpdir(), `${job.id}.mp4`);
@@ -54,14 +60,12 @@ const worker = new Worker('render-queue', async (job) => {
             serveUrl: bundleLocation,
             codec: 'h264',
             outputLocation,
-            inputProps: {
-                layers: job.data.layers,
-                durationInFrames: durationInFrames
-            },
-            durationInFrames: durationInFrames, // Explicit Override
+            inputProps, // Use the prepared props
+            durationInFrames: durationInFrames,
         });
+        // --- CHANGE END ---
 
-        // 4. Upload
+        // 5. Upload (Renumbered from 4)
         const destination = `renders/${job.id}.mp4`;
         await storage.bucket(bucketName).upload(outputLocation, { destination });
         const publicUrl = `https://storage.googleapis.com/${bucketName}/${destination}`;
