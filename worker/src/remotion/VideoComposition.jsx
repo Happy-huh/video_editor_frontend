@@ -43,9 +43,10 @@ const styles = `
   @keyframes lowerThirdBar { 0% { width: 0; } 100% { width: 100%; } }
   @keyframes textReveal { 0% { clip-path: inset(0 100% 0 0); } 100% { clip-path: inset(0 0 0 0); } }
   @keyframes health-drain { 0% { width: 100%; } 50% { width: 60%; } 100% { width: 30%; } }
-  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* MOTION CLASSES */
+  .animate-spin { animation: spin 1s linear infinite; }
   .motion-enter-slide-left { animation: slideInLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   .motion-lower-third-bar { animation: lowerThirdBar 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   .motion-text-reveal { animation: textReveal 0.8s 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; clip-path: inset(0 100% 0 0); }
