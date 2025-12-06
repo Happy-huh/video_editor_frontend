@@ -155,6 +155,10 @@ export const VideoComposition = ({ layers }) => {
                 {layer.subtype === 'clay-button' && <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', fontWeight:'bold', letterSpacing:'1px', textTransform:'uppercase'}}>{layer.text}</div>}
                 {layer.subtype === 'clay-glass' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}></div>}
                 {layer.subtype === 'clay-frame-phone' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}><div style={{width:'90%', height:'95%', background:'black', borderRadius:20}}></div></div>}
+                
+                {/* NEW: Added clay-frame support */}
+                {layer.subtype === 'clay-frame' && <div style={{width:'100%', height:'100%'}}></div>}
+                
                 {layer.subtype === 'clay-shape' && <div style={{width:'100%', height:'100%'}}></div>}
                 {layer.subtype === 'clay-emoji' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}>{layer.content}</div>}
                 {layer.subtype === 'clay-spinner' && <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}><Loader2 className="animate-spin" size={40} color={layer.style.color}/></div>}

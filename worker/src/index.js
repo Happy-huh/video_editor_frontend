@@ -65,6 +65,7 @@ const worker = new Worker('render-queue', async (job) => {
         const destination = `renders/${job.id}.mp4`;
         await storage.bucket(bucketName).upload(outputLocation, { destination });
         const publicUrl = `https://storage.googleapis.com/${bucketName}/${destination}`;
+        console.log('Job completed successfully!')
         
         return { videoUrl: publicUrl };
 
